@@ -133,7 +133,7 @@ export const
   },
 
   allProtos = computed(() => {
-    return sortBy(protobufTypes.value, "name")
+    return sortBy(protobufTypes.value, "path")
   }),
 
   protosByModule = computed(() => {
