@@ -183,7 +183,12 @@ const DEFAULTS_BY_TYPE = {
   bool: false
 }
 
-const defaultValueForField = ({ type, fieldType }) => {
+const defaultValueForField = ({ type, fieldType, options }) => {
+  // prefer nanopb default from .options files when present
+  if(options?.default !== undefined) {
+    return options.default
+  }
+
   const recognizedTypes = Object.keys(DEFAULTS_BY_TYPE)
 
   return (includes(recognizedTypes, type)

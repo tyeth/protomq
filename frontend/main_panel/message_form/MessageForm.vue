@@ -24,6 +24,11 @@
       <button @click="publishMessage">Publish</button>
     </div>
 
+    <label class="nanopb-toggle">
+      <input type="checkbox" v-model="enforceNanopbLimits"/>
+      Enforce nanopb limits
+    </label>
+
     <div>
       <h4>Debug: Protobuf Payload</h4>
       <pre>{{ messageObject }}</pre>
@@ -46,7 +51,9 @@
   const
     messageStore = useMessageStore(),
     mqttStore = useMQTTStore(),
-    { setMode } = useUIStore(),
+    uiStore = useUIStore(),
+    { setMode } = uiStore,
+    { enforceNanopbLimits } = storeToRefs(uiStore),
     { messageObject, messageType, messageFields } = storeToRefs(messageStore),
     { clearMessage } = messageStore,
     { filteredSubscriptions } = storeToRefs(useSubscriptionStore()),
@@ -57,6 +64,15 @@
     manualTopic = ref(!topicValue.value),
     toggleManualTopic = () => manualTopic.value = !manualTopic.value,
     publishMessage = () => {
+      // validate nanopb limits if enforcement is on
+      if(enforceNanopbLimits.value) {
+        const violations = validateNanopbLimits(messageObject.value, messageFields.value)
+        if(violations.length) {
+          alert(`Nanopb limit violations:\n\n${violations.join('\n')}`)
+          return
+        }
+      }
+
       const
         topic = topicValue.value,
         messageName = messageType.value.name,
@@ -74,6 +90,41 @@
       mqttStore.publishMessage(topicValue.value, encodedMessage)
       clearMessage()
     }
+
+  // recursively validate nanopb limits against the message payload
+  const validateNanopbLimits = (obj, fieldsByPath, path='') => {
+    const violations = []
+    if(!obj || typeof obj !== 'object') return violations
+
+    const fields = fieldsByPath[path] || []
+
+    for(const field of fields) {
+      const value = obj[field.fieldName]
+      const fieldLabel = path ? `${path}.${field.fieldName}` : field.fieldName
+
+      // max_size: string length limit
+      if(field.options?.max_size && typeof value === 'string') {
+        if(value.length > field.options.max_size) {
+          violations.push(`${fieldLabel}: length ${value.length} exceeds max_size ${field.options.max_size}`)
+        }
+      }
+
+      // max_count: repeated field item limit
+      if(field.options?.max_count && Array.isArray(value)) {
+        if(value.length > field.options.max_count) {
+          violations.push(`${fieldLabel}: ${value.length} items exceeds max_count ${field.options.max_count}`)
+        }
+      }
+
+      // recurse into nested messages
+      if(field.fieldType === 'message' && value && typeof value === 'object') {
+        const nextPath = fieldLabel
+        violations.push(...validateNanopbLimits(value, fieldsByPath, nextPath))
+      }
+    }
+
+    return violations
+  }
 </script>
 
 <style>
@@ -121,5 +172,20 @@
   .action-bar button:hover {
     cursor: pointer;
     background-color: hsl(31, 28%, 45%);
+  }
+
+  .nanopb-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    margin-top: 1em;
+    font-size: 0.9em;
+    color: gray;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .nanopb-toggle input[type="checkbox"] {
+    cursor: pointer;
   }
 </style>

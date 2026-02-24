@@ -70,10 +70,14 @@ const sanitizeMessageFields = () => {
   _.chain(protobufTypes.value)
     .filter({ fieldType: 'message' })
     .forEach(message => {
+      // resolve the parent namespace from the message's fully-qualified type
+      // e.g. "ws.ds18x20.B2D" -> "ws.ds18x20"
+      const parentNamespace = message.type.split('.').slice(0, -1).join('.')
+
       message.fields = _.chain(message.fields)
-        // convert fields into array
+        // convert fields into array, stamp with parent namespace for type resolution
         .map((field, fieldName) => ({
-          fieldName, fieldType: detectFieldType(field), ...field
+          fieldName, fieldType: detectFieldType(field, parentNamespace), parentNamespace, ...field
         }))
         // drop deprecated fields
         .reject(option => {
@@ -115,13 +119,13 @@ const sanitizeMessageFields = () => {
     }).value()
 }
 
-const detectFieldType = ({ type, name }) => {
+const detectFieldType = ({ type, name }, parentNamespace) => {
   if(isPrimitive({ type })) {
     return 'primitive'
   } else if(type === 'oneof') {
     return 'oneof'
   } else {
-    return findProtoFor({ type, name })?.fieldType || 'unknown'
+    return findProtoFor({ type, name, parentNamespace })?.fieldType || 'unknown'
   }
 }
 
@@ -149,8 +153,20 @@ export const
 
   findProtoFor = typeToFind => {
     debug('searching protos for', typeToFind)
-    return findProtoBy({ type: typeToFind.type })
-      || findProtoBy({ name: typeToFind.type.split('.').at(-1) })
+    // try exact fully-qualified type first
+    const exactMatch = findProtoBy({ type: typeToFind.type })
+    if(exactMatch) return exactMatch
+
+    // if the field carries a parentNamespace, resolve relative type within that namespace
+    // e.g. type "Add" in namespace "ws.ds18x20" -> look for "ws.ds18x20.Add"
+    if(typeToFind.parentNamespace) {
+      const qualifiedType = `${typeToFind.parentNamespace}.${typeToFind.type}`
+      const nsMatch = findProtoBy({ type: qualifiedType })
+      if(nsMatch) return nsMatch
+    }
+
+    // last resort: match by short name (first match wins — ambiguous for common names)
+    return findProtoBy({ name: typeToFind.type.split('.').at(-1) })
   },
 
   isPrimitive = typeToCheck => includes(PRIMITIVE_TYPES, typeToCheck.type),
