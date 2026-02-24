@@ -46,7 +46,7 @@
   import FieldInput from './FieldInput.vue'
   import { encodeByName, envelopeLookup } from '/frontend/protobuf_service'
   import { useMQTTStore } from '/frontend/stores/mqtt'
-  import { topicToMessageName } from '/frontend/util'
+  import { topicToMessageName, TOPIC_MESSAGE_MAP } from '/frontend/util'
 
   const
     messageStore = useMessageStore(),
@@ -81,7 +81,8 @@
         messageNameByTopic = topicToMessageName(topic)
 
       if(messageNameByTopic !== envelopeMessage.name) {
-        alert(`Message envelope mismatch!\nTopic expected: ${messageNameByTopic}\nMessage expected: ${envelopeMessage.name}`)
+        const possibleTopics = TOPIC_MESSAGE_MAP.map(([ topicSpec, protoName ]) => `${protoName}: ${topicSpec}`)
+        alert(`Message envelope mismatch!\nTopic expected: ${messageNameByTopic}\nMessage expected: ${envelopeMessage.name}\n\nPossible topics:\n${possibleTopics.join('\n')}`)
         return
       }
 

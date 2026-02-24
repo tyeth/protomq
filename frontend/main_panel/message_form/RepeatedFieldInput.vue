@@ -14,7 +14,7 @@
       </span>
     </label>
 
-    <InputComponent v-for="(item, index) in items" :field="item" :fieldPath="fieldPath" :label="index"/>
+    <InputComponent v-for="(item, index) in items" :field="item" :fieldPath="fieldPath" :label="String(index)"/>
   </div>
 </template>
 
