@@ -36,9 +36,8 @@ async function main() {
     return
   }
 
-  const
-    broker = createBroker(),
-    webServer = createWebApp(broker)
+  const broker = await createBroker()
+  const webServer = createWebApp(broker)
 }
 
 main()

@@ -136,120 +136,165 @@ const applyOptionToBundle = (bundle, fqn, options) => {
 }
 
 
+// Recursively copy .proto and .options files from source to destination,
+// flattening the directory structure (all files end up in one directory).
+const recursiveProtoCopy = async (currentDirectory, destination) => {
+  const items = await readdir(currentDirectory)
+
+  for (const itemName of items) {
+    const fullSourcePath = `${currentDirectory}/${itemName}`
+
+    // skip nanopb
+    if (itemName == "nanopb.proto") {
+      // skip
+
+    // copy .proto and .options files
+    } else if (itemName.endsWith('.proto') || itemName.endsWith('.options')) {
+      const fullDestinationPath = `./${destination}/${itemName}`
+      await copyFile(fullSourcePath, fullDestinationPath)
+
+    // recurse into directories
+    } else if ((await lstat(fullSourcePath)).isDirectory()) {
+      await recursiveProtoCopy(fullSourcePath, destination)
+    }
+  }
+}
+
+
+// Transform .proto files in a directory by applying replacement rules
+const transformProtos = async (destination, replacements) => {
+  for (const filename of await readdir(destination)) {
+    if (!filename.endsWith('.proto')) continue
+
+    const filePath = `./${destination}/${filename}`
+    const contents = (await readFile(filePath)).toString()
+    const replacedContents = replacements.reduce((acc, replaceArgs) => {
+      return acc.replaceAll(...replaceArgs)
+    }, contents)
+
+    await writeFile(filePath, replacedContents)
+  }
+}
+
+
+// Compile protos to JSON bundle and merge .options metadata
+const compileAndMerge = async (protoDir, entryPoint, outputPath) => {
+  console.log(`Compiling ${protoDir}/${entryPoint} to ${outputPath}`)
+
+  return new Promise((resolve, reject) => {
+    pbjs.main(["--target", "json", `${protoDir}/${entryPoint}`], async (err, output) => {
+      if (err) { reject(err); return }
+
+      const bundle = JSON.parse(output)
+
+      // Parse .options files and merge nanopb metadata into the bundle
+      console.log('Merging .options metadata into bundle...')
+      const allFiles = await readdir(protoDir)
+      const optionsFiles = allFiles.filter(f => f.endsWith('.options'))
+
+      let appliedCount = 0
+      let skippedCount = 0
+
+      for (const optionsFile of optionsFiles) {
+        const contents = (await readFile(`./${protoDir}/${optionsFile}`)).toString()
+        const entries = parseOptionsFile(contents)
+
+        for (const { fqn, options } of entries) {
+          if (applyOptionToBundle(bundle, fqn, options)) {
+            appliedCount++
+          } else {
+            console.warn(`  Could not resolve: ${fqn} (from ${optionsFile})`)
+            skippedCount++
+          }
+        }
+      }
+
+      console.log(`  Applied ${appliedCount} option(s), ${skippedCount} unresolved`)
+
+      await writeFile(outputPath, JSON.stringify(bundle, null, 2))
+      resolve()
+    })
+  })
+}
+
+
+// Standard replacements for all proto files
+const standardReplacements = [
+  // no nanopb
+  ['import "nanopb.proto";', '// nanopb import removed'],
+  ['import "nanopb/nanopb.proto";', '// nanopb import removed'],
+  // flatten import directories: "wippersnapper/file.proto" -> "file.proto"
+  [/import "((?:\w*\/)+)\w*.proto";/g, (match, group) => match.replace(group, '')]
+]
+
+// Additional replacements for V1 protos (which have inline nanopb annotations)
+const v1ExtraReplacements = [
+  // strip nanopb message options: option (nanopb_msgopt).submsg_callback = true;
+  [/\s*option\s*\(nanopb_msgopt\)[^;]*;\s*/g, '\n'],
+  // strip nanopb field annotations after other options: , (nanopb).type = FT_IGNORE
+  [/,\s*\(nanopb\)\.\w+\s*=\s*\w+/g, ''],
+  // strip standalone nanopb field options: [(nanopb).type = FT_IGNORE]
+  [/\s*\[\s*\(nanopb\)[^\]]*\]/g, ''],
+]
+
+
 // wrap and call so we can use async/await
-(async function() {
+;(async function() {
   console.log("Protobuf Import")
 
   console.log("Loading env.json...")
   const env = await loadEnv()
 
+  // ============================================================
+  // V2 Proto Import (primary, from protobufSource in .env.json)
+  // ============================================================
   const destination = "protobufs"
+  console.log(`\n--- V2 Proto Import ---`)
   console.log(`Cleaning destination: ${destination}`)
 
-  // rm -rf protobufs && mkdir protobufs
   await rm(destination, { recursive: true, force: true })
   await mkdir(destination)
 
-  // import from where? look up location
-  const
-    protobufRoot = env.protobufSource,
-    protobufRootExpanded = protobufRoot.replace('~', homedir())
+  const protobufRootExpanded = env.protobufSource.replace('~', homedir())
+  console.log(`Copying .proto and .options files from: ${protobufRootExpanded}`)
 
-  console.log(`Copying .proto and .options files (recursively) from: ${protobufRootExpanded}`)
+  await recursiveProtoCopy(protobufRootExpanded, destination)
 
-  const recursiveProtoCopy = async currentDirectory => {
-    // list items in directory
-    const items = await readdir(currentDirectory)
+  console.log('Transforming V2 .proto files...')
+  await transformProtos(destination, standardReplacements)
 
-    for(const itemName of items) {
-      const fullSourcePath = `${currentDirectory}/${itemName}`
+  await compileAndMerge(destination, 'signal.proto', `${destination}/bundle.json`)
 
-      // skip nanopb
-      if(itemName == "nanopb.proto") {
-        // console.log("skip", itemName)
+  // ============================================================
+  // V1 Proto Import (optional, from protobufSourceV1 in .env.json)
+  // ============================================================
+  if (env.protobufSourceV1) {
+    const destinationV1 = "protobufs-v1"
+    console.log(`\n--- V1 Proto Import ---`)
+    console.log(`Cleaning destination: ${destinationV1}`)
 
-      // copy .proto and .options files
-      } else if(itemName.endsWith('.proto') || itemName.endsWith('.options')) {
-        // console.log("copy", itemName)
-        const fullDestinationPath = `./${destination}/${itemName}`
-        await copyFile(fullSourcePath, fullDestinationPath)
+    await rm(destinationV1, { recursive: true, force: true })
+    await mkdir(destinationV1)
 
-      // recurse into directories
-      } else if((await lstat(fullSourcePath)).isDirectory()) {
-        // console.log("recurse", itemName)
-        await recursiveProtoCopy(fullSourcePath)
+    const protobufRootV1 = env.protobufSourceV1.replace('~', homedir())
+    console.log(`Copying V1 .proto and .options files from: ${protobufRootV1}`)
 
-      // say what you're skipping
-      } else {
-        // console.log("skip", itemName)
-      }
+    await recursiveProtoCopy(protobufRootV1, destinationV1)
+
+    console.log('Transforming V1 .proto files...')
+    await transformProtos(destinationV1, [...standardReplacements, ...v1ExtraReplacements])
+
+    // Find the V1 signal entry point
+    const v1Files = await readdir(destinationV1)
+    const v1Signal = v1Files.find(f => f === 'signal.proto')
+    if (v1Signal) {
+      await compileAndMerge(destinationV1, 'signal.proto', `${destinationV1}/bundle.json`)
+    } else {
+      console.warn('V1 signal.proto not found, skipping V1 bundle compilation')
     }
+  } else {
+    console.log('\nNo protobufSourceV1 in .env.json, skipping V1 proto import')
   }
 
-  await recursiveProtoCopy(protobufRootExpanded)
-
-  console.log('Transforming .proto files...')
-
-  // modifications to make to the proto files
-  const replacements = [
-    // no nanopb
-    ['import "nanopb.proto";', '// nanopb import removed'],
-    ['import "nanopb/nanopb.proto";', '// nanopb import removed'],
-    // flatten import directories: "wippersnapper/file.proto" -> "file.proto"
-    [/import "((?:\w*\/)+)\w*.proto";/g, (match, group) => match.replace(group, '')]
-  ]
-
-  // traverse the proto files in the destination (only .proto files need transformation)
-  for(const filename of await readdir(destination)) {
-    if (!filename.endsWith('.proto')) continue
-
-    const
-      // build the full path
-      filePath = `./${destination}/${filename}`,
-      // read the file into memory
-      contents = (await readFile(filePath)).toString(),
-      // apply all replacements
-      replacedContents = replacements.reduce((acc, replaceArgs) => {
-        return acc.replaceAll(...replaceArgs)
-      }, contents)
-
-    // overwrite the file
-    await writeFile(filePath, replacedContents)
-  }
-
-  console.log('Processing *.proto files to bundle.json')
-
-  pbjs.main([ "--target", "json", "protobufs/signal.proto" ], async (err, output) => {
-    if (err) { throw err }
-
-    const bundle = JSON.parse(output)
-
-    // Parse .options files and merge nanopb metadata into the bundle
-    console.log('Merging .options metadata into bundle...')
-    const allFiles = await readdir(destination)
-    const optionsFiles = allFiles.filter(f => f.endsWith('.options'))
-
-    let appliedCount = 0
-    let skippedCount = 0
-
-    for (const optionsFile of optionsFiles) {
-      const contents = (await readFile(`./${destination}/${optionsFile}`)).toString()
-      const entries = parseOptionsFile(contents)
-
-      for (const { fqn, options } of entries) {
-        if (applyOptionToBundle(bundle, fqn, options)) {
-          appliedCount++
-        } else {
-          console.warn(`  Could not resolve: ${fqn} (from ${optionsFile})`)
-          skippedCount++
-        }
-      }
-    }
-
-    console.log(`  Applied ${appliedCount} option(s), ${skippedCount} unresolved`)
-
-    await writeFile('protobufs/bundle.json', JSON.stringify(bundle, null, 2))
-  })
-
-  console.log('Done')
+  console.log('\nDone')
 })()

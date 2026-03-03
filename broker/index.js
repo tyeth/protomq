@@ -8,7 +8,7 @@ import { addDefaultAuthResponses } from './authorization.js'
 import { addDefaultPBResponses, addEchoService } from './protobuf_autoresponders.js'
 
 
-export const createBroker = () => {
+export const createBroker = async () => {
   const
     broker = Aedes(),
     server = net.createServer(broker.handle),
@@ -30,7 +30,7 @@ export const createBroker = () => {
   addLoggingListeners(broker)
   addReactiveEmitters(broker)
   addDefaultAuthResponses(broker)
-  addDefaultPBResponses(broker)
+  await addDefaultPBResponses(broker)
   addEchoService(broker)
 
   return broker

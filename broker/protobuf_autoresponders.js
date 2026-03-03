@@ -1,11 +1,37 @@
 /**
-  Specify protobufs to listen for and respond with
+  Specify protobufs to listen for and respond with.
+  Supports both V2 (nested signal envelopes) and V1 (flat message keys).
+  Uses playback scripts from scripts/ directory for demo sequences.
 */
 import { find, keys, camelCase } from 'lodash-es'
 import { BrokerToDevice, DeviceToBroker } from "../protobufs.js"
+import { installScriptRunner } from './script_runner.js'
 
 
-const requestToResponseMap = {
+// ============================================================================
+// Fallback V2 checkin handler (used when no script matches)
+// ============================================================================
+
+const handleV2CheckinFallback = (d2bRequest) => {
+  if (!d2bRequest.checkin?.request) return null
+  return {
+    checkin: {
+      response: {
+        response: 'R_OK',
+        totalGpioPins: 20,
+        totalAnalogPins: 4,
+        referenceVoltage: 2.5
+      }
+    }
+  }
+}
+
+
+// ============================================================================
+// Fallback V1 request/response map (flat message keys, backward compat)
+// ============================================================================
+
+const v1RequestToResponseMap = {
   checkinRequest: {
     checkinResponse: {
       response: 'RESPONSE_OK',
@@ -15,6 +41,11 @@ const requestToResponseMap = {
     }
   }
 }
+
+
+// ============================================================================
+// Default echo messages
+// ============================================================================
 
 const defaultMessages = {
   digitalioAdd: {
@@ -26,23 +57,53 @@ const defaultMessages = {
   }
 }
 
+
+// ============================================================================
+// Exports
+// ============================================================================
+
 export const
-  addDefaultPBResponses = broker => {
-    console.log("PBResponse Listener: Register")
+  addDefaultPBResponses = async (broker) => {
+    // Load and install the script runner
+    const { scripts, activeExecutor, activeScriptName } = await installScriptRunner(broker)
+
+    // V2 topic pattern
+    console.log("PBResponse Listener: Register (V2 topics: +/ws-d2b/+/)")
     broker.subscribe(
       '+/ws-d2b/+/',
       (packet, callback) => {
         const d2bRequest = DeviceToBroker.decode(packet.payload)
 
-        // find the key in the re/res map
-        const responsePayload = find(requestToResponseMap, (response, requestKey) =>
+        // Try active script first
+        if (activeExecutor) {
+          const handled = activeExecutor.handleMessage(d2bRequest, packet)
+          if (handled) {
+            callback()
+            return
+          }
+        }
+
+        // Fallback: V2 nested checkin matching
+        const v2Response = handleV2CheckinFallback(d2bRequest)
+        if (v2Response) {
+          console.log(`[Fallback V2] Auto-Responding to checkin:\n  ${JSON.stringify(d2bRequest, null, 2)}`)
+          const b2dResponse = BrokerToDevice.encode(v2Response).finish()
+          broker.publish({
+            topic: packet.topic.replace('d2b', 'b2d'),
+            payload: b2dResponse
+          })
+          callback()
+          return
+        }
+
+        // Fallback: V1 flat matching
+        const v1ResponsePayload = find(v1RequestToResponseMap, (response, requestKey) =>
           d2bRequest[requestKey]
         )
 
-        if(responsePayload) {
-          console.log(`Auto-Responding to:\n  ${JSON.stringify(d2bRequest, null, 2)}\nwith:\n  ${JSON.stringify(responsePayload, null, 2)}`)
-          const b2dResponse = BrokerToDevice.encode(responsePayload).finish()
-
+        if (v1ResponsePayload) {
+          console.log(`[Fallback V1] Auto-Responding to:\n  ${JSON.stringify(d2bRequest, null, 2)}`)
+          const b2dResponse = BrokerToDevice.encode(v1ResponsePayload).finish()
           broker.publish({
             topic: packet.topic.replace('d2b', 'b2d'),
             payload: b2dResponse
@@ -53,7 +114,22 @@ export const
 
         callback()
       },
-      () => console.log('Protobuf autoresponders installed')
+      () => console.log('V2 protobuf autoresponders installed')
+    )
+
+    // V1 topic pattern (for devices on older firmware)
+    console.log("PBResponse Listener: Register (V1 topics: +/wprsnpr/+/signals/device/+)")
+    broker.subscribe(
+      '+/wprsnpr/+/signals/device/+',
+      (packet, callback) => {
+        // V1 messages use per-component wrapper protos (DisplayRequest, etc.)
+        // Full V1 decode requires V1 proto bundle (not yet imported)
+        console.log(`[V1 topic] Received on: ${packet.topic} (${packet.payload.length} bytes)`)
+        console.log(`[V1 topic] Note: V1 proto decode not yet implemented`)
+
+        callback()
+      },
+      () => console.log('V1 topic listener installed (decode pending V1 proto import)')
     )
   },
 
