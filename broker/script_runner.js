@@ -130,13 +130,13 @@ export class ScriptExecutor {
     // Send response/payload to the device's B2D topic
     if (step.response) {
       console.log(`[Script: ${this.script.name}] Sending response for "${step.name}" on ${this._b2dTopic}`)
-      const encoded = BrokerToDevice.encode(step.response).finish()
+      const encoded = BrokerToDevice.encode(BrokerToDevice.fromObject(step.response)).finish()
       this.broker.publish({ topic: this._b2dTopic, payload: encoded })
     }
 
     if (step.send) {
       console.log(`[Script: ${this.script.name}] Sending payload for "${step.name}" on ${this._b2dTopic}`)
-      const encoded = BrokerToDevice.encode(step.send).finish()
+      const encoded = BrokerToDevice.encode(BrokerToDevice.fromObject(step.send)).finish()
       this.broker.publish({ topic: this._b2dTopic, payload: encoded })
     }
 
@@ -164,13 +164,13 @@ export class ScriptExecutor {
         // Send payload/response to the device's B2D topic
         if (step.send) {
           console.log(`[Script: ${this.script.name}] Publishing to ${this._b2dTopic}`)
-          const encoded = BrokerToDevice.encode(step.send).finish()
+          const encoded = BrokerToDevice.encode(BrokerToDevice.fromObject(step.send)).finish()
           this.broker.publish({ topic: this._b2dTopic, payload: encoded })
         }
 
         if (step.response) {
           console.log(`[Script: ${this.script.name}] Sending response for "${step.name}" on ${this._b2dTopic}`)
-          const encoded = BrokerToDevice.encode(step.response).finish()
+          const encoded = BrokerToDevice.encode(BrokerToDevice.fromObject(step.response)).finish()
           this.broker.publish({ topic: this._b2dTopic, payload: encoded })
         }
 

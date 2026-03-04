@@ -87,9 +87,9 @@ export const
     _scriptState = { scripts, activeExecutor, activeScriptName, broker }
 
     // V2 topic pattern
-    console.log("PBResponse Listener: Register (V2 topics: +/ws-d2b/+/)")
+    console.log("PBResponse Listener: Register (V2 topics: +/ws-d2b/+)")
     broker.subscribe(
-      '+/ws-d2b/+/',
+      '+/ws-d2b/+',
       (packet, callback) => {
         const d2bRequest = DeviceToBroker.decode(packet.payload)
 

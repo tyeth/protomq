@@ -10,7 +10,7 @@
       "response": {
         "checkin": {
           "response": {
-            "response": 1,
+            "response": "R_OK",
             "totalGpioPins": 20,
             "totalAnalogPins": 4,
             "referenceVoltage": 2.5,
