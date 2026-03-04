@@ -123,6 +123,8 @@ export class ScriptExecutor {
           if (!this.autoReset) continue
           console.log(`[Script: ${this.script.name}] Auto-reset: trigger "${step.name}" fired again`)
           this.reset()
+          // TODO: deriveB2dTopic only handles V2 topics — will need V1 topic derivation when V1 scripts are supported
+          this._b2dTopic = deriveB2dTopic(packet.topic)
         }
         console.log(`[Script: ${this.script.name}] Trigger matched: "${step.name}" (${step.trigger})`)
         this._executeStep(step, packet)

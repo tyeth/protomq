@@ -60,15 +60,19 @@ const
   sortDeliveries = broker => (packet, callback) => {
     const { topic, clientId } = packet
 
-    if(topicIsIgnored(topic)) { return }
+    if(topicIsIgnored(topic)) { callback(); return }
 
-    const
+    let protobufPayload
+    try {
       protobufPayload = topic.includes('/ws-d2b/')
         ? DeviceToBroker.decode(packet.payload)
         : topic.includes('/ws-b2d/')
         ? BrokerToDevice.decode(packet.payload)
-        : packet.payload,
-      trackablePacket = { topic, payload: protobufPayload }
+        : packet.payload
+    } catch (e) {
+      protobufPayload = packet.payload
+    }
+    const trackablePacket = { topic, payload: protobufPayload }
 
     // if the publishing client has an outbox, track it
     deliveries[clientId]?.outbox.push(trackablePacket)
@@ -81,4 +85,5 @@ const
 
     // push it into their inboxes
     forEach(hitClients, client => deliveries[client.id].inbox.push(trackablePacket))
+    callback()
   }

@@ -14,6 +14,7 @@ connections, decoding protobuf messages, and sending messages to connected devic
 7. Run `npm start`
 8. Visit the web UI at `http://localhost:5173/`
 9. Connect an MQTT client to `mqtt://localhost:1884`
+10. Kill background task versions of protomq in windows: `Get-WmiObject Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -match 'main\.js' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }`
 
 ## Ports
 
