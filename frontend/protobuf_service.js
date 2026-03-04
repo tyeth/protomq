@@ -77,7 +77,7 @@ const sanitizeMessageFields = () => {
       message.fields = _.chain(message.fields)
         // convert fields into array, stamp with parent namespace for type resolution
         .map((field, fieldName) => ({
-          fieldName, fieldType: detectFieldType(field, parentNamespace), parentNamespace, ...field
+          fieldName, fieldType: detectFieldType(field, parentNamespace, message.type), parentNamespace, messageType: message.type, ...field
         }))
         // drop deprecated fields
         .reject(option => {
@@ -119,13 +119,13 @@ const sanitizeMessageFields = () => {
     }).value()
 }
 
-const detectFieldType = ({ type, name }, parentNamespace) => {
+const detectFieldType = ({ type, name }, parentNamespace, messageType) => {
   if(isPrimitive({ type })) {
     return 'primitive'
   } else if(type === 'oneof') {
     return 'oneof'
   } else {
-    return findProtoFor({ type, name, parentNamespace })?.fieldType || 'unknown'
+    return findProtoFor({ type, name, parentNamespace, messageType })?.fieldType || 'unknown'
   }
 }
 
@@ -156,6 +156,14 @@ export const
     // try exact fully-qualified type first
     const exactMatch = findProtoBy({ type: typeToFind.type })
     if(exactMatch) return exactMatch
+
+    // try nested type within the containing message (proto3: inner scope shadows outer)
+    // e.g. type "Response" inside message "ws.checkin.Response" -> "ws.checkin.Response.Response" (the nested enum)
+    if(typeToFind.messageType) {
+      const nestedType = `${typeToFind.messageType}.${typeToFind.type}`
+      const nestedMatch = findProtoBy({ type: nestedType })
+      if(nestedMatch) return nestedMatch
+    }
 
     // if the field carries a parentNamespace, resolve relative type within that namespace
     // e.g. type "Add" in namespace "ws.ds18x20" -> look for "ws.ds18x20.Add"

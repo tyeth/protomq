@@ -13,7 +13,9 @@
             "response": "R_OK",
             "totalGpioPins": 20,
             "totalAnalogPins": 4,
-            "referenceVoltage": 2.5
+            "referenceVoltage": 2.5,
+            "componentAdds": {},
+            "sleepEnabled": false
           }
         }
       }

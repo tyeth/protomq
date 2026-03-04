@@ -170,6 +170,103 @@ export const useMessageStore = defineStore('message', () => {
 
         this.setDefault(field, path)
       })
+    },
+
+    // Load a message form pre-populated with data from an existing object (e.g., script step).
+    // Phase 1: select oneofs from the data so messageFields cache is fully populated.
+    // Phase 2: replace messageObject with a clean copy built from the data (no junk defaults).
+    loadFromData: function(messageType, data) {
+      // Initialize form structure
+      this.messageType = messageType
+      this.messageObject = {}
+      this.messageFields = { '': cloneDeep(messageType.fields) }
+
+      // Phase 1: walk data to select oneofs and populate messageFields cache
+      this._selectOneofsFromData(data, '')
+
+      // Phase 2: build a clean messageObject with only oneof selectors + actual data
+      this.messageObject = {}
+      this._buildObjectFromData(data, this.messageObject, '')
+
+      useUIStore().setMode('configureMessage')
+    },
+
+    // Recursively walk data to find and select oneofs. This triggers setOneOf which
+    // populates the messageFields cache (needed for form rendering).
+    _selectOneofsFromData: function(data, path) {
+      if (!data || typeof data !== 'object') return
+
+      const fields = this.messageFields[path]
+      if (!fields) return
+
+      for (const key of Object.keys(data)) {
+        const value = data[key]
+
+        const oneofField = fields.find(f =>
+          f.fieldType === 'oneof' && f.options?.some(o => o.fieldName === key)
+        )
+
+        if (oneofField) {
+          const option = oneofField.options.find(o => o.fieldName === key)
+          const oneofPath = compact([path, oneofField.fieldName]).join('.')
+          this.setOneOf(oneofPath, option)
+
+          if (option.fieldType === 'message' && value && typeof value === 'object') {
+            this._selectOneofsFromData(value, compact([path, key]).join('.'))
+          }
+        } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+          // Regular message field - recurse to find nested oneofs
+          this._selectOneofsFromData(value, compact([path, key]).join('.'))
+        }
+      }
+    },
+
+    // Build a clean messageObject from the data, adding oneof selector keys as needed.
+    _buildObjectFromData: function(data, target, path) {
+      if (!data || typeof data !== 'object') return
+
+      const fields = this.messageFields[path]
+      if (!fields) return
+
+      for (const key of Object.keys(data)) {
+        const value = data[key]
+
+        // Check if this key belongs to a oneof — if so, set the selector
+        const oneofField = fields.find(f =>
+          f.fieldType === 'oneof' && f.options?.some(o => o.fieldName === key)
+        )
+
+        if (oneofField) {
+          // Set the oneof selector (e.g., payload: "checkin")
+          target[oneofField.fieldName] = key
+
+          if (value && typeof value === 'object' && !Array.isArray(value)) {
+            target[key] = {}
+            this._buildObjectFromData(value, target[key], compact([path, key]).join('.'))
+          } else {
+            target[key] = value
+          }
+        } else {
+          // Regular field — look up field definition for type-aware handling
+          const field = fields.find(f => f.fieldName === key)
+
+          if (field?.fieldType === 'enum' && typeof value === 'string') {
+            // Convert enum string name (e.g., "R_OK") to numeric value (e.g., 1)
+            const enumProto = findProtoFor(field)
+            if (enumProto?.values?.[value] !== undefined) {
+              target[key] = enumProto.values[value]
+            } else {
+              target[key] = value
+            }
+          } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+            // Nested message — recurse to handle any inner enums/oneofs
+            target[key] = {}
+            this._buildObjectFromData(value, target[key], compact([path, key]).join('.'))
+          } else {
+            target[key] = value
+          }
+        }
+      }
     }
   }
 })

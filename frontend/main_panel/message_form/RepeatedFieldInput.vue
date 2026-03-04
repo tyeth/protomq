@@ -77,7 +77,12 @@
 
     InputComponent = computed(() => fieldTypeComponentMap[props.field.fieldType])
 
-  addItem()
+  // Only auto-add one item if a value already exists at this path.
+  // In newMessage flow, setDefaults populates repeated fields before mount.
+  // In loadFromData flow, fields not in the data are undefined — skip auto-add.
+  if (useMessageStore().getDeep(nextFieldPath) !== undefined) {
+    addItem()
+  }
 </script>
 
 <style>

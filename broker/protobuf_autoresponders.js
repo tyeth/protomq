@@ -20,7 +20,9 @@ const handleV2CheckinFallback = (d2bRequest) => {
         response: 'R_OK',
         totalGpioPins: 20,
         totalAnalogPins: 4,
-        referenceVoltage: 2.5
+        referenceVoltage: 2.5,
+        componentAdds: {},
+        sleepEnabled: false
       }
     }
   }
@@ -62,10 +64,27 @@ const defaultMessages = {
 // Exports
 // ============================================================================
 
+import { ScriptExecutor } from './script_runner.js'
+
+// Module-level script runner state (accessible from API)
+let _scriptState = { scripts: new Map(), activeExecutor: null, activeScriptName: null, broker: null }
+
+export const getScriptState = () => _scriptState
+
+export const setActiveScript = (name) => {
+  const script = _scriptState.scripts.get(name)
+  if (!script) return false
+  if (_scriptState.activeExecutor) _scriptState.activeExecutor.reset()
+  _scriptState.activeExecutor = new ScriptExecutor(script, _scriptState.broker)
+  _scriptState.activeScriptName = name
+  return true
+}
+
 export const
   addDefaultPBResponses = async (broker) => {
     // Load and install the script runner
     const { scripts, activeExecutor, activeScriptName } = await installScriptRunner(broker)
+    _scriptState = { scripts, activeExecutor, activeScriptName, broker }
 
     // V2 topic pattern
     console.log("PBResponse Listener: Register (V2 topics: +/ws-d2b/+/)")
@@ -74,9 +93,9 @@ export const
       (packet, callback) => {
         const d2bRequest = DeviceToBroker.decode(packet.payload)
 
-        // Try active script first
-        if (activeExecutor) {
-          const handled = activeExecutor.handleMessage(d2bRequest, packet)
+        // Try active script first (use module state so API changes are reflected)
+        if (_scriptState.activeExecutor) {
+          const handled = _scriptState.activeExecutor.handleMessage(d2bRequest, packet)
           if (handled) {
             callback()
             return

@@ -3,6 +3,8 @@
   <hr/>
   <SubscriptionsMenu/>
   <hr/>
+  <ScriptsMenu/>
+  <hr/>
   <ProtobufsMenu/>
 </template>
 
@@ -10,6 +12,7 @@
   import ProtobufsMenu from './ProtobufsMenu.vue'
   import ClientsMenu from './ClientsMenu.vue'
   import SubscriptionsMenu from './SubscriptionsMenu.vue'
+  import ScriptsMenu from './ScriptsMenu.vue'
 </script>
 
 <style>

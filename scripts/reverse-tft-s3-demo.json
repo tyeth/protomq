@@ -13,7 +13,9 @@
             "response": "R_OK",
             "totalGpioPins": 20,
             "totalAnalogPins": 4,
-            "referenceVoltage": 2.5
+            "referenceVoltage": 2.5,
+            "componentAdds": {},
+            "sleepEnabled": false
           }
         }
       }
@@ -29,6 +31,7 @@
           "add": {
             "type": "DISPLAY_TYPE_TFT",
             "driver": "ST7789",
+            "panel": "adafruit-reverse-tft",
             "name": "tft0",
             "spiTft": {
               "bus": 0,
@@ -43,6 +46,10 @@
               "height": 135,
               "rotation": 1,
               "textSize": 2
+            },
+            "write": {
+              "name": "tft0",
+              "message": "Hello from ProtoMQ!"
             }
           }
         }
