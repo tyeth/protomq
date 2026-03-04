@@ -23,6 +23,7 @@ export default (router, broker) => {
           description: step.description,
           trigger: step.trigger || null,
           after: step.after || null,
+          waitFor: step.waitFor || null,
           delay: step.delay || 0,
           topic: step.topic || null,
           hasSend: !!step.send,
@@ -39,9 +40,10 @@ export default (router, broker) => {
   // Activate a script by filename
   router.post('/scripts/:name/activate', (req, res) => {
     const { name } = req.params
-    const ok = setActiveScript(name)
+    const { disabledSteps, autoReset } = req.body || {}
+    const ok = setActiveScript(name, { disabledSteps: disabledSteps || [], autoReset: autoReset !== false })
     if (ok) {
-      console.log(`[Scripts API] Activated: ${name}`)
+      console.log(`[Scripts API] Activated: ${name}`, disabledSteps?.length ? `(disabled: ${disabledSteps.join(', ')})` : '')
       res.json({ status: 'OK', active: name })
     } else {
       res.status(404).json({ error: `Script not found: ${name}` })
@@ -56,7 +58,8 @@ export default (router, broker) => {
       res.status(400).json({ error: `Script "${name}" is not the active script` })
       return
     }
-    activeExecutor.reset()
+    const { disabledSteps, autoReset } = req.body || {}
+    activeExecutor.reset(disabledSteps || [], autoReset !== undefined ? autoReset : undefined)
     console.log(`[Scripts API] Reset: ${name}`)
     res.json({ status: 'OK', reset: name })
   })

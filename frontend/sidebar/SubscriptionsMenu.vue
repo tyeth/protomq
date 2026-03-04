@@ -85,7 +85,7 @@
   }
 
   .filter-controls {
-    border: solid 1px gray;
+    border: solid 1px var(--border);
     padding: 5px;
   }
 
@@ -94,13 +94,13 @@
   }
 
   .hidden-label {
-    color: gray;
+    color: var(--text-muted);
     font-style: italic;
   }
 
   .click-affordance:hover {
     cursor: pointer;
-    background-color: lightgray;
+    background-color: var(--bg-sidebar-hover);
   }
 
   .list-label {

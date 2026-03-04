@@ -71,11 +71,11 @@ let _scriptState = { scripts: new Map(), activeExecutor: null, activeScriptName:
 
 export const getScriptState = () => _scriptState
 
-export const setActiveScript = (name) => {
+export const setActiveScript = (name, { disabledSteps = [], autoReset = true } = {}) => {
   const script = _scriptState.scripts.get(name)
   if (!script) return false
   if (_scriptState.activeExecutor) _scriptState.activeExecutor.reset()
-  _scriptState.activeExecutor = new ScriptExecutor(script, _scriptState.broker)
+  _scriptState.activeExecutor = new ScriptExecutor(script, _scriptState.broker, { disabledSteps, autoReset })
   _scriptState.activeScriptName = name
   return true
 }

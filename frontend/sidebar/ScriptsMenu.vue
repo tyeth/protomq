@@ -15,22 +15,47 @@
       <div class="script-controls">
         <button v-if="!script.active" @click="activate(script.filename)">Activate</button>
         <button v-if="script.active" @click="reset(script.filename)">Reset</button>
+        <label class="auto-reset-label">
+          <input type="checkbox"
+            :checked="getAutoReset(script.filename)"
+            @change="toggleAutoReset(script.filename)">
+          Auto-reset
+        </label>
       </div>
 
       <ul>
-        <li v-for="step in script.steps" :key="step.name" class="step-item">
-          <span class="step-name" :class="{ completed: script.completedSteps?.includes(step.name) }">
-            {{ step.name }}
-          </span>
-          <span v-if="step.trigger" class="step-tag trigger">on: {{ step.trigger }}</span>
-          <span v-if="step.after" class="step-tag after">after: {{ step.after }}</span>
-          <button v-if="step.hasSend || step.hasResponse" class="edit-btn" @click="editStep(step)" title="Open in message form">
-            Edit
-          </button>
-          <button v-if="step.hasSend || step.hasResponse" class="send-btn" @click="sendStep(script.filename, step.name)">
-            Send
-          </button>
-        </li>
+        <template v-for="step in script.steps" :key="step.name">
+          <li v-if="step.delay && (step.after || step.waitFor)" class="step-item delay-row">
+            <input type="checkbox"
+              :checked="!isDisabled(script.filename, step.name + ':delay')"
+              @change="toggleDisabled(script.filename, step.name + ':delay')"
+              title="Enable/disable this delay">
+            <span class="delay-label">
+              {{ step.waitFor ? 'waitFor: ' + step.waitFor + ' +' : '' }} {{ step.delay }}ms
+            </span>
+          </li>
+          <li class="step-item">
+            <input type="checkbox"
+              :checked="!isDisabled(script.filename, step.name)"
+              @change="toggleDisabled(script.filename, step.name)"
+              title="Enable/disable this step">
+            <span class="step-name" :class="{
+              completed: script.completedSteps?.includes(step.name),
+              disabled: isDisabled(script.filename, step.name)
+            }">
+              {{ step.name }}
+            </span>
+            <span v-if="step.trigger" class="step-tag trigger">on: {{ step.trigger }}</span>
+            <span v-if="step.after" class="step-tag after">after: {{ step.after }}</span>
+            <span v-if="step.waitFor && !step.delay" class="step-tag waitfor">waitFor: {{ step.waitFor }}</span>
+            <button v-if="step.hasSend || step.hasResponse" class="edit-btn" @click="editStep(step)" title="Open in message form">
+              Edit
+            </button>
+            <button v-if="step.hasSend || step.hasResponse" class="send-btn" @click="sendStep(script.filename, step.name)">
+              Send
+            </button>
+          </li>
+        </template>
       </ul>
     </div>
   </div>
@@ -45,7 +70,28 @@
     messageStore = useMessageStore(),
     scripts = ref([]),
     loading = ref(true),
-    expanded = reactive({})
+    expanded = reactive({}),
+    disabledSteps = reactive({}),  // { filename: Set<stepName> }
+    autoResetState = reactive({})  // { filename: boolean } — default true
+
+  const getAutoReset = (filename) => autoResetState[filename] !== false
+
+  const toggleAutoReset = (filename) => {
+    autoResetState[filename] = !getAutoReset(filename)
+  }
+
+  const isDisabled = (filename, stepName) => disabledSteps[filename]?.has(stepName)
+
+  const toggleDisabled = (filename, stepName) => {
+    if (!disabledSteps[filename]) disabledSteps[filename] = new Set()
+    if (disabledSteps[filename].has(stepName)) {
+      disabledSteps[filename].delete(stepName)
+    } else {
+      disabledSteps[filename].add(stepName)
+    }
+  }
+
+  const getDisabledList = (filename) => [...(disabledSteps[filename] || [])]
 
   const fetchScripts = async () => {
     try {
@@ -68,12 +114,20 @@
   }
 
   const activate = async (filename) => {
-    await fetch(`/api/scripts/${filename}/activate`, { method: 'POST' })
+    await fetch(`/api/scripts/${filename}/activate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ disabledSteps: getDisabledList(filename), autoReset: getAutoReset(filename) })
+    })
     await fetchScripts()
   }
 
   const reset = async (filename) => {
-    await fetch(`/api/scripts/${filename}/reset`, { method: 'POST' })
+    await fetch(`/api/scripts/${filename}/reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ disabledSteps: getDisabledList(filename), autoReset: getAutoReset(filename) })
+    })
     await fetchScripts()
   }
 
@@ -113,13 +167,13 @@
   }
 
   .script-item h4.active {
-    color: green;
+    color: var(--accent-green);
     font-weight: bold;
   }
 
   .script-desc {
     font-size: 0.8em;
-    color: gray;
+    color: var(--text-muted);
     margin: 0 0 0.5em 0;
     white-space: normal;
   }
@@ -132,6 +186,16 @@
     font-size: 0.8em;
     margin-right: 0.5em;
     cursor: pointer;
+  }
+
+  .auto-reset-label {
+    font-size: 0.8em;
+    cursor: pointer;
+    user-select: none;
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
   }
 
   .step-item {
@@ -151,7 +215,7 @@
 
   .step-name.completed {
     text-decoration: line-through;
-    color: gray;
+    color: var(--text-muted);
   }
 
   .step-tag {
@@ -162,13 +226,40 @@
   }
 
   .step-tag.trigger {
-    background: #e8f5e9;
-    color: #2e7d32;
+    background: var(--bg-tag-trigger);
+    color: var(--color-tag-trigger);
   }
 
   .step-tag.after {
-    background: #e3f2fd;
-    color: #1565c0;
+    background: var(--bg-tag-after);
+    color: var(--color-tag-after);
+  }
+
+  .step-tag.waitfor {
+    background: var(--bg-tag-after);
+    color: var(--color-tag-after);
+  }
+
+  .step-item input[type="checkbox"] {
+    margin: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .step-name.disabled {
+    opacity: 0.4;
+    text-decoration: line-through;
+  }
+
+  .delay-row {
+    list-style: none;
+    padding-left: 0.3em;
+  }
+
+  .delay-label {
+    font-size: 0.75em;
+    font-family: monospace;
+    color: var(--text-muted);
   }
 
   .edit-btn, .send-btn {
@@ -179,24 +270,24 @@
   }
 
   .edit-btn {
-    background: #e3f2fd;
-    border: 1px solid #1565c0;
-    color: #1565c0;
+    background: var(--bg-edit-btn);
+    border: 1px solid var(--color-edit-btn);
+    color: var(--color-edit-btn);
   }
 
   .edit-btn:hover {
-    background: #1565c0;
+    background: var(--color-edit-btn);
     color: white;
   }
 
   .send-btn {
-    background: #fff3e0;
-    border: 1px solid #ef6c00;
-    color: #ef6c00;
+    background: var(--bg-send-btn);
+    border: 1px solid var(--color-send-btn);
+    color: var(--color-send-btn);
   }
 
   .send-btn:hover {
-    background: #ef6c00;
+    background: var(--color-send-btn);
     color: white;
   }
 </style>

@@ -145,8 +145,10 @@ export const useMessageStore = defineStore('message', () => {
     setDefault: function(field, path) {
       const isArray = field.rule === 'repeated'
 
-      // nested message, look up the protobuf type and recurse
+      // Skip optional message fields — they'll be added on demand via "+" button.
+      // Only auto-populate repeated message fields (they get the +/- UI).
       if(field.fieldType === 'message') {
+        if(!isArray) return  // skip optional sub-messages for compact view
         this.setDeep(path, field, isArray)
         return
       }

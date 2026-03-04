@@ -135,7 +135,7 @@
 
   .description {
     font-style: italic;
-    color: gray;
+    color: var(--text-muted);
   }
 
   .topic-input {
@@ -181,7 +181,7 @@
     gap: 0.5em;
     margin-top: 1em;
     font-size: 0.9em;
-    color: gray;
+    color: var(--text-muted);
     cursor: pointer;
     user-select: none;
   }

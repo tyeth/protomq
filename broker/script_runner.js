@@ -18,7 +18,8 @@
  *     {
  *       "name": "step-id-2",
  *       "after": "step-id",              // execute after named step completes
- *       "delay": 2000,                   // wait N ms after the "after" step
+ *       "waitFor": "checkin.complete",   // wait for this D2B message pattern before executing
+ *       "delay": 2000,                   // wait N ms after the "after" step (or after waitFor match)
  *       "topic": "display",              // component topic to publish on
  *       "send": { ... },                 // BrokerToDevice payload
  *     }
@@ -89,11 +90,14 @@ const deriveB2dTopic = (d2bTopic) => d2bTopic.replace('/ws-d2b/', '/ws-b2d/')
  * Tracks execution state and handles step sequencing.
  */
 export class ScriptExecutor {
-  constructor(script, broker) {
+  constructor(script, broker, { disabledSteps = [], autoReset = true } = {}) {
     this.script = script
     this.broker = broker
     this.completedSteps = new Set()
     this.pendingTimers = []
+    this._pendingWaitSteps = []  // Steps waiting for a D2B message match
+    this._disabledSteps = new Set(disabledSteps)
+    this.autoReset = autoReset
     this._b2dTopic = null  // Derived from first incoming D2B topic
   }
 
@@ -106,21 +110,46 @@ export class ScriptExecutor {
    */
   handleMessage(decodedMessage, packet) {
     this._b2dTopic = deriveB2dTopic(packet.topic)
+    let matched = false
 
+    // Check trigger steps
     for (const step of this.script.steps) {
-      // Skip steps that don't have triggers (they're sequenced via "after")
       if (!step.trigger) continue
-
-      // Skip already-completed trigger steps
-      if (this.completedSteps.has(step.name)) continue
+      if (this._disabledSteps.has(step.name)) continue
 
       if (matchesTrigger(decodedMessage, step.trigger)) {
+        // Auto-reset: if trigger already completed, reset and re-run from scratch
+        if (this.completedSteps.has(step.name)) {
+          if (!this.autoReset) continue
+          console.log(`[Script: ${this.script.name}] Auto-reset: trigger "${step.name}" fired again`)
+          this.reset()
+        }
         console.log(`[Script: ${this.script.name}] Trigger matched: "${step.name}" (${step.trigger})`)
         this._executeStep(step, packet)
-        return true
+        matched = true
+        break
       }
     }
-    return false
+
+    // Check pending waitFor steps
+    for (let i = this._pendingWaitSteps.length - 1; i >= 0; i--) {
+      const step = this._pendingWaitSteps[i]
+      if (matchesTrigger(decodedMessage, step.waitFor)) {
+        console.log(`[Script: ${this.script.name}] waitFor matched: "${step.name}" (${step.waitFor})`)
+        this._pendingWaitSteps.splice(i, 1)
+        const delay = step.delay || 0
+        if (delay > 0) {
+          console.log(`[Script: ${this.script.name}] Executing "${step.name}" after ${delay}ms delay`)
+          const timer = setTimeout(() => this._executeStep(step, packet), delay)
+          this.pendingTimers.push(timer)
+        } else {
+          this._executeStep(step, packet)
+        }
+        matched = true
+      }
+    }
+
+    return matched
   }
 
   /**
@@ -154,28 +183,20 @@ export class ScriptExecutor {
     for (const step of this.script.steps) {
       if (step.after !== completedStepName) continue
       if (this.completedSteps.has(step.name)) continue
+      if (this._disabledSteps.has(step.name)) continue
+
+      // If step has a waitFor, queue it for D2B message matching instead of a timer
+      if (step.waitFor) {
+        console.log(`[Script: ${this.script.name}] Queuing "${step.name}" waitFor: ${step.waitFor}`)
+        this._pendingWaitSteps.push(step)
+        continue
+      }
 
       const delay = step.delay || 0
       console.log(`[Script: ${this.script.name}] Scheduling "${step.name}" in ${delay}ms`)
 
       const timer = setTimeout(() => {
-        console.log(`[Script: ${this.script.name}] Executing "${step.name}"`)
-
-        // Send payload/response to the device's B2D topic
-        if (step.send) {
-          console.log(`[Script: ${this.script.name}] Publishing to ${this._b2dTopic}`)
-          const encoded = BrokerToDevice.encode(BrokerToDevice.fromObject(step.send)).finish()
-          this.broker.publish({ topic: this._b2dTopic, payload: encoded })
-        }
-
-        if (step.response) {
-          console.log(`[Script: ${this.script.name}] Sending response for "${step.name}" on ${this._b2dTopic}`)
-          const encoded = BrokerToDevice.encode(BrokerToDevice.fromObject(step.response)).finish()
-          this.broker.publish({ topic: this._b2dTopic, payload: encoded })
-        }
-
-        this.completedSteps.add(step.name)
-        this._scheduleFollowUps(step.name)
+        this._executeStep(step)
       }, delay)
 
       this.pendingTimers.push(timer)
@@ -185,11 +206,14 @@ export class ScriptExecutor {
   /**
    * Reset execution state (for re-running the script).
    */
-  reset() {
+  reset(disabledSteps, autoReset) {
     this.pendingTimers.forEach(t => clearTimeout(t))
     this.pendingTimers = []
+    this._pendingWaitSteps = []
     this.completedSteps.clear()
     this._b2dTopic = null
+    if (disabledSteps !== undefined) this._disabledSteps = new Set(disabledSteps)
+    if (autoReset !== undefined) this.autoReset = autoReset
     console.log(`[Script: ${this.script.name}] Reset`)
   }
 }

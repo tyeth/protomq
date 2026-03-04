@@ -24,7 +24,8 @@
       "name": "add-display",
       "description": "Configure the ST7789 TFT display (240x135, SPI)",
       "after": "checkin-response",
-      "delay": 2000,
+      "waitFor": "checkin.complete",
+      "delay": 500,
       "topic": "display",
       "send": {
         "display": {

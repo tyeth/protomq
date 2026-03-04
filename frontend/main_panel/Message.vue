@@ -40,17 +40,17 @@
 
 <style>
   .message-container {
-    border: 1px solid gray;
+    border: 1px solid var(--border);
     border-radius: 10px;
     margin-bottom: 1em;
   }
 
   .message-metadata {
-    background-color: rgb(233, 233, 233);
+    background-color: var(--bg-metadata);
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
     padding: 5px 15px;
-    border-bottom: 1px solid gray;
+    border-bottom: 1px solid var(--border);
   }
 
   .message-name {
@@ -58,7 +58,7 @@
   }
 
   .message-topic {
-    color: gray;
+    color: var(--text-muted);
     font-size: .8em;
   }
 

@@ -35,6 +35,6 @@
 
   .sidebar li:hover {
     cursor: pointer;
-    background-color: lightgray;
+    background-color: var(--bg-sidebar-hover);
   }
 </style>

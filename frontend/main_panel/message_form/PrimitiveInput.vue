@@ -46,7 +46,7 @@
 <style scoped>
   .nanopb-hint {
     font-size: 0.8em;
-    color: gray;
+    color: var(--text-muted);
     white-space: nowrap;
   }
   .nanopb-hint.limit-exceeded {
