@@ -77,10 +77,11 @@ const matchesTrigger = (decodedMessage, trigger) => {
 
 
 /**
- * Extract the device prefix from a topic string.
- * e.g., "mydevice/ws-d2b/checkin/" -> "mydevice"
+ * Derive the B2D topic from an incoming D2B topic.
+ * V2 devices subscribe to a single B2D topic: {prefix}/ws-b2d/{device-uid}
+ * e.g., "test_user/ws-d2b/feather-esp32s3-xyz" -> "test_user/ws-b2d/feather-esp32s3-xyz"
  */
-const extractDevicePrefix = (topic) => topic.split('/')[0]
+const deriveB2dTopic = (d2bTopic) => d2bTopic.replace('/ws-d2b/', '/ws-b2d/')
 
 
 /**
@@ -93,7 +94,7 @@ export class ScriptExecutor {
     this.broker = broker
     this.completedSteps = new Set()
     this.pendingTimers = []
-    this.devicePrefix = null
+    this._b2dTopic = null  // Derived from first incoming D2B topic
   }
 
   get name() {
@@ -104,7 +105,7 @@ export class ScriptExecutor {
    * Process an incoming D2B message. Returns true if a trigger matched.
    */
   handleMessage(decodedMessage, packet) {
-    this.devicePrefix = extractDevicePrefix(packet.topic)
+    this._b2dTopic = deriveB2dTopic(packet.topic)
 
     for (const step of this.script.steps) {
       // Skip steps that don't have triggers (they're sequenced via "after")
@@ -126,22 +127,17 @@ export class ScriptExecutor {
    * Execute a step: send response, mark complete, schedule follow-ups.
    */
   _executeStep(step, packet) {
-    // Send response on same topic (if defined)
+    // Send response/payload to the device's B2D topic
     if (step.response) {
-      console.log(`[Script: ${this.script.name}] Sending response for "${step.name}"`)
+      console.log(`[Script: ${this.script.name}] Sending response for "${step.name}" on ${this._b2dTopic}`)
       const encoded = BrokerToDevice.encode(step.response).finish()
-      this.broker.publish({
-        topic: packet.topic.replace('d2b', 'b2d'),
-        payload: encoded
-      })
+      this.broker.publish({ topic: this._b2dTopic, payload: encoded })
     }
 
-    // Send payload to specific topic (if defined)
-    if (step.send && step.topic) {
-      const topic = `${this.devicePrefix}/ws-b2d/${step.topic}/`
-      console.log(`[Script: ${this.script.name}] Sending to ${topic} for "${step.name}"`)
+    if (step.send) {
+      console.log(`[Script: ${this.script.name}] Sending payload for "${step.name}" on ${this._b2dTopic}`)
       const encoded = BrokerToDevice.encode(step.send).finish()
-      this.broker.publish({ topic, payload: encoded })
+      this.broker.publish({ topic: this._b2dTopic, payload: encoded })
     }
 
     // Mark step complete
@@ -165,23 +161,17 @@ export class ScriptExecutor {
       const timer = setTimeout(() => {
         console.log(`[Script: ${this.script.name}] Executing "${step.name}"`)
 
-        // Send payload to specific topic
-        if (step.send && step.topic) {
-          const topic = `${this.devicePrefix}/ws-b2d/${step.topic}/`
-          console.log(`[Script: ${this.script.name}] Publishing to ${topic}`)
+        // Send payload/response to the device's B2D topic
+        if (step.send) {
+          console.log(`[Script: ${this.script.name}] Publishing to ${this._b2dTopic}`)
           const encoded = BrokerToDevice.encode(step.send).finish()
-          this.broker.publish({ topic, payload: encoded })
+          this.broker.publish({ topic: this._b2dTopic, payload: encoded })
         }
 
-        // Send response on a topic derived from trigger context (if defined)
         if (step.response) {
-          console.log(`[Script: ${this.script.name}] Sending response for "${step.name}"`)
+          console.log(`[Script: ${this.script.name}] Sending response for "${step.name}" on ${this._b2dTopic}`)
           const encoded = BrokerToDevice.encode(step.response).finish()
-          // For sequenced responses, we need a topic - use component topic
-          if (step.topic) {
-            const topic = `${this.devicePrefix}/ws-b2d/${step.topic}/`
-            this.broker.publish({ topic, payload: encoded })
-          }
+          this.broker.publish({ topic: this._b2dTopic, payload: encoded })
         }
 
         this.completedSteps.add(step.name)
@@ -199,7 +189,7 @@ export class ScriptExecutor {
     this.pendingTimers.forEach(t => clearTimeout(t))
     this.pendingTimers = []
     this.completedSteps.clear()
-    this.devicePrefix = null
+    this._b2dTopic = null
     console.log(`[Script: ${this.script.name}] Reset`)
   }
 }
@@ -221,20 +211,14 @@ export const installScriptRunner = async (broker, activeScriptName = null) => {
 
   console.log(`Script Runner: Loaded ${scripts.size} script(s)`)
 
-  // Pick the active script
-  let activeScript = null
+  // Only activate a script if explicitly requested
   if (activeScriptName && scripts.has(activeScriptName)) {
-    activeScript = scripts.get(activeScriptName)
-  } else {
-    // Default to first script
-    const firstKey = scripts.keys().next().value
-    activeScript = scripts.get(firstKey)
-    activeScriptName = firstKey
+    const activeScript = scripts.get(activeScriptName)
+    console.log(`Script Runner: Active script: "${activeScript.name}" (${activeScriptName})`)
+    const executor = new ScriptExecutor(activeScript, broker)
+    return { scripts, activeExecutor: executor, activeScriptName }
   }
 
-  console.log(`Script Runner: Active script: "${activeScript.name}" (${activeScriptName})`)
-
-  const executor = new ScriptExecutor(activeScript, broker)
-
-  return { scripts, activeExecutor: executor, activeScriptName }
+  console.log(`Script Runner: No script active (activate via UI or --script flag)`)
+  return { scripts, activeExecutor: null, activeScriptName: null }
 }

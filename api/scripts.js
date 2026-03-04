@@ -86,21 +86,17 @@ export default (router, broker) => {
       return
     }
 
-    // Resolve device prefix: from request body, from connected clients, or fallback
-    let prefix = devicePrefix
-    if (!prefix) {
-      const clientIds = Object.keys(broker.clients || {})
-      const deviceClient = clientIds.find(id => id !== req.protomq?.clientId)
-      prefix = deviceClient || 'protomq-ui'
-    }
-
-    // Determine topic
-    let topic
-    if (step.topic) {
-      topic = `${prefix}/ws-b2d/${step.topic}/`
-    } else {
-      // For response-type steps, use checkin topic
-      topic = `${prefix}/ws-b2d/checkin/`
+    // Find the device's B2D subscription topic (V2: {user}/ws-b2d/{uid})
+    let topic = devicePrefix
+    if (!topic) {
+      for (const client of Object.values(broker.clients || {})) {
+        if (client.id && client.id.startsWith('io-wipper-')) {
+          const subs = Object.keys(client.subscriptions || {})
+          topic = subs.find(s => s.includes('/ws-b2d/'))
+          if (topic) break
+        }
+      }
+      if (!topic) topic = 'protomq-ui/ws-b2d/unknown'
     }
 
     try {

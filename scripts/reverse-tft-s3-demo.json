@@ -10,7 +10,7 @@
       "response": {
         "checkin": {
           "response": {
-            "response": "R_OK",
+            "response": 1,
             "totalGpioPins": 20,
             "totalAnalogPins": 4,
             "referenceVoltage": 2.5,
@@ -29,17 +29,17 @@
       "send": {
         "display": {
           "add": {
-            "type": "DISPLAY_TYPE_TFT",
+            "type": 2,
             "driver": "ST7789",
             "panel": "adafruit-reverse-tft",
             "name": "tft0",
             "spiTft": {
               "bus": 0,
-              "pinCs": "7",
-              "pinDc": "39",
-              "pinMosi": "35",
-              "pinSck": "36",
-              "pinRst": "40"
+              "pinCs": "D42",
+              "pinDc": "D40",
+              "pinMosi": "D35",
+              "pinSck": "D36",
+              "pinRst": "D41"
             },
             "configTft": {
               "width": 240,
