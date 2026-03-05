@@ -68,8 +68,12 @@ import { ScriptExecutor } from './script_runner.js'
 
 // Module-level script runner state (accessible from API)
 let _scriptState = { scripts: new Map(), activeExecutor: null, activeScriptName: null, broker: null }
+let _fallbackCheckinEnabled = true
 
 export const getScriptState = () => _scriptState
+
+export const getFallbackCheckinEnabled = () => _fallbackCheckinEnabled
+export const setFallbackCheckinEnabled = (enabled) => { _fallbackCheckinEnabled = enabled }
 
 export const setActiveScript = (name, { disabledSteps = [], autoReset = true } = {}) => {
   const script = _scriptState.scripts.get(name)
@@ -102,17 +106,19 @@ export const
           }
         }
 
-        // Fallback: V2 nested checkin matching
+        // Fallback: V2 nested checkin matching (when no script handles it)
+        if (_fallbackCheckinEnabled) {
         const v2Response = handleV2CheckinFallback(d2bRequest)
         if (v2Response) {
           console.log(`[Fallback V2] Auto-Responding to checkin:\n  ${JSON.stringify(d2bRequest, null, 2)}`)
-          const b2dResponse = BrokerToDevice.encode(v2Response).finish()
+          const b2dResponse = BrokerToDevice.encode(BrokerToDevice.fromObject(v2Response)).finish()
           broker.publish({
             topic: packet.topic.replace('d2b', 'b2d'),
             payload: b2dResponse
           })
           callback()
           return
+        }
         }
 
         // Fallback: V1 flat matching
@@ -122,7 +128,7 @@ export const
 
         if (v1ResponsePayload) {
           console.log(`[Fallback V1] Auto-Responding to:\n  ${JSON.stringify(d2bRequest, null, 2)}`)
-          const b2dResponse = BrokerToDevice.encode(v1ResponsePayload).finish()
+          const b2dResponse = BrokerToDevice.encode(BrokerToDevice.fromObject(v1ResponsePayload)).finish()
           broker.publish({
             topic: packet.topic.replace('d2b', 'b2d'),
             payload: b2dResponse

@@ -1,6 +1,13 @@
 <template>
   <h3>Scripts</h3>
 
+  <label class="fallback-checkin-label">
+    <input type="checkbox"
+      :checked="fallbackCheckinEnabled"
+      @change="toggleFallbackCheckin">
+    Fallback checkin auto-responder
+  </label>
+
   <div v-if="loading">Loading...</div>
   <div v-else-if="!scripts.length">No scripts loaded</div>
 
@@ -70,6 +77,7 @@
     messageStore = useMessageStore(),
     scripts = ref([]),
     loading = ref(true),
+    fallbackCheckinEnabled = ref(true),
     expanded = reactive({}),
     disabledSteps = reactive({}),  // { filename: Set<stepName> }
     autoResetState = reactive({})  // { filename: boolean } — default true
@@ -98,6 +106,7 @@
       const res = await fetch('/api/scripts')
       const data = await res.json()
       scripts.value = data.scripts
+      if (data.fallbackCheckinEnabled !== undefined) fallbackCheckinEnabled.value = data.fallbackCheckinEnabled
       // auto-expand active script
       for (const s of data.scripts) {
         if (s.active && expanded[s.filename] === undefined) expanded[s.filename] = true
@@ -107,6 +116,16 @@
     } finally {
       loading.value = false
     }
+  }
+
+  const toggleFallbackCheckin = async () => {
+    const enabled = !fallbackCheckinEnabled.value
+    await fetch('/api/scripts/fallback-checkin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled })
+    })
+    fallbackCheckinEnabled.value = enabled
   }
 
   const toggleExpanded = (filename) => {
@@ -161,6 +180,19 @@
 </script>
 
 <style>
+  .fallback-checkin-label {
+    font-size: 0.8em;
+    cursor: pointer;
+    user-select: none;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.3em;
+    margin-bottom: 0.5em;
+    padding-bottom: 0.5em;
+    border-bottom: 1px solid var(--border-color, #333);
+  }
+
   .script-item h4 {
     cursor: pointer;
     font-family: monospace;

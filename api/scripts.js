@@ -1,4 +1,4 @@
-import { getScriptState, setActiveScript } from '../broker/protobuf_autoresponders.js'
+import { getScriptState, setActiveScript, getFallbackCheckinEnabled, setFallbackCheckinEnabled } from '../broker/protobuf_autoresponders.js'
 import { BrokerToDevice } from '../protobufs.js'
 
 export default (router, broker) => {
@@ -34,7 +34,15 @@ export default (router, broker) => {
       })
     }
 
-    res.json({ scripts: list })
+    res.json({ scripts: list, fallbackCheckinEnabled: getFallbackCheckinEnabled() })
+  })
+
+  // Toggle fallback checkin auto-responder
+  router.post('/scripts/fallback-checkin', (req, res) => {
+    const { enabled } = req.body
+    setFallbackCheckinEnabled(!!enabled)
+    console.log(`[Scripts API] Fallback checkin auto-responder: ${enabled ? 'enabled' : 'disabled'}`)
+    res.json({ status: 'OK', fallbackCheckinEnabled: !!enabled })
   })
 
   // Activate a script by filename
