@@ -18,6 +18,7 @@ export const useMessageStore = defineStore('message', () => {
     messageObject: ref(null),
     messageType: ref(null),
     messageFields: ref(null),
+    formKey: ref(0),
 
     // caches fields from protobufs, so we can add/remove fields without
     // modifying the core protobuf info
@@ -97,6 +98,7 @@ export const useMessageStore = defineStore('message', () => {
       this.messageFields = {
         '': cloneDeep(messageType.fields)
       }
+      this.formKey++
 
       this.setDefaults(this.messageType)
 
@@ -182,6 +184,7 @@ export const useMessageStore = defineStore('message', () => {
       this.messageType = messageType
       this.messageObject = {}
       this.messageFields = { '': cloneDeep(messageType.fields) }
+      this.formKey++
 
       // Phase 1: walk data to select oneofs and populate messageFields cache
       this._selectOneofsFromData(data, '')
@@ -198,7 +201,7 @@ export const useMessageStore = defineStore('message', () => {
     _selectOneofsFromData: function(data, path) {
       if (!data || typeof data !== 'object') return
 
-      const fields = this.messageFields[path]
+      const fields = this.getFieldsAtPath(path)
       if (!fields) return
 
       for (const key of Object.keys(data)) {
@@ -227,7 +230,7 @@ export const useMessageStore = defineStore('message', () => {
     _buildObjectFromData: function(data, target, path) {
       if (!data || typeof data !== 'object') return
 
-      const fields = this.messageFields[path]
+      const fields = this.getFieldsAtPath(path)
       if (!fields) return
 
       for (const key of Object.keys(data)) {

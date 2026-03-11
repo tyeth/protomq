@@ -1,6 +1,6 @@
 <template>
   <MessageLog v-if="messagesMode"/>
-  <MessageForm v-else-if="configureMessageMode" :key="messageType?.name"/>
+  <MessageForm v-else-if="configureMessageMode" :key="formKey"/>
 </template>
 
 <script setup>
@@ -11,7 +11,7 @@
   import MessageForm from './message_form/MessageForm.vue'
 
   const { messagesMode, configureMessageMode } = storeToRefs(useUIStore())
-  const { messageType } = storeToRefs(useMessageStore())
+  const { formKey } = storeToRefs(useMessageStore())
 </script>
 
 <style>
