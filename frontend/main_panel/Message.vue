@@ -3,6 +3,7 @@
     <div class="message-metadata" :title="message.topic">
       <span class="message-name">{{ prettyMessageName }}</span>
       <a class="message-resend-button" title="Resend this message?" href="#" @click="resendMessage()">&nbsp;➡️&nbsp;</a>
+      <span class="message-timestamp" v-if="message.timestamp">{{ prettyTimestamp }}</span>
       <span class="message-topic">{{ prettyTopic }}</span>
     </div>
 
@@ -29,6 +30,11 @@
         : topic
     }),
     prettyMessageName = computed(() => topicToMessageName(props.message.topic)),
+    prettyTimestamp = computed(() => {
+      const ts = props.message.timestamp
+      if (!ts) return ''
+      return ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    }),
     prettyMessageBody = computed(() => parseMessage(props.message)),
 
     // instantly publishes this message again, to the same topic
@@ -55,6 +61,12 @@
 
   .message-name {
     font-weight: 600;
+  }
+
+  .message-timestamp {
+    color: var(--text-muted);
+    font-size: .8em;
+    margin-right: 0.5em;
   }
 
   .message-topic {

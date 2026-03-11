@@ -20,7 +20,7 @@ const EVENT_NAMES = [
 // HELPERS
 const
   formatPacket = packet => (packet
-    ? { topic: packet.topic, payload: packet.payload?.toString() }
+    ? { topic: packet.topic, payload_hex: Buffer.from(packet.payload).toString('hex'), payload_str: packet.payload?.toString() }
     : 'packet unavailable'
   ),
   addListeners = (broker, listeners, options={}) => {

@@ -95,7 +95,16 @@ export const
     broker.subscribe(
       '+/ws-d2b/+',
       (packet, callback) => {
-        const d2bRequest = DeviceToBroker.decode(packet.payload)
+        const rawHex = Buffer.from(packet.payload).toString('hex')
+        let d2bRequest
+        try {
+          d2bRequest = DeviceToBroker.decode(packet.payload)
+        } catch (err) {
+          console.log(`[V2] Failed to decode payload (${packet.payload.length} bytes, hex: ${rawHex}):`, err.message)
+          callback()
+          return
+        }
+        const decodedJson = JSON.stringify(DeviceToBroker.toObject(d2bRequest, { enums: String, defaults: true }), null, 2)
 
         // Try active script first (use module state so API changes are reflected)
         if (_scriptState.activeExecutor) {
@@ -110,7 +119,7 @@ export const
         if (_fallbackCheckinEnabled) {
         const v2Response = handleV2CheckinFallback(d2bRequest)
         if (v2Response) {
-          console.log(`[Fallback V2] Auto-Responding to checkin:\n  ${JSON.stringify(d2bRequest, null, 2)}`)
+          console.log(`[Fallback V2] Auto-Responding to checkin:\n  raw: ${rawHex}\n  decoded: ${decodedJson}`)
           const b2dResponse = BrokerToDevice.encode(BrokerToDevice.fromObject(v2Response)).finish()
           broker.publish({
             topic: packet.topic.replace('d2b', 'b2d'),
@@ -127,14 +136,14 @@ export const
         )
 
         if (v1ResponsePayload) {
-          console.log(`[Fallback V1] Auto-Responding to:\n  ${JSON.stringify(d2bRequest, null, 2)}`)
+          console.log(`[Fallback V1] Auto-Responding to:\n  raw: ${rawHex}\n  decoded: ${decodedJson}`)
           const b2dResponse = BrokerToDevice.encode(BrokerToDevice.fromObject(v1ResponsePayload)).finish()
           broker.publish({
             topic: packet.topic.replace('d2b', 'b2d'),
             payload: b2dResponse
           })
         } else {
-          console.log(`Not Auto-Responding to:\n  ${JSON.stringify(d2bRequest, null, 2)}`)
+          console.log(`Not Auto-Responding to:\n  raw: ${rawHex}\n  decoded: ${decodedJson}`)
         }
 
         callback()
