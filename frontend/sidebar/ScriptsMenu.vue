@@ -21,6 +21,7 @@
 
       <div class="script-controls">
         <button v-if="!script.active" @click="activate(script.filename)">Activate</button>
+        <button v-if="script.active" @click="deactivate()">Deactivate</button>
         <button v-if="script.active" @click="reset(script.filename)">Reset</button>
         <label class="auto-reset-label">
           <input type="checkbox"
@@ -107,15 +108,25 @@
       const data = await res.json()
       scripts.value = data.scripts
       if (data.fallbackCheckinEnabled !== undefined) fallbackCheckinEnabled.value = data.fallbackCheckinEnabled
-      // auto-expand active script
+      // auto-expand active script and pre-populate disabled steps from script enabled field
       for (const s of data.scripts) {
         if (s.active && expanded[s.filename] === undefined) expanded[s.filename] = true
+        // Initialize disabled steps from script-level enabled:false defaults (only on first load)
+        if (!disabledSteps[s.filename]) {
+          const defaultDisabled = s.steps.filter(step => !step.enabled).map(step => step.name)
+          if (defaultDisabled.length) disabledSteps[s.filename] = new Set(defaultDisabled)
+        }
       }
     } catch (e) {
       console.error('Failed to fetch scripts:', e)
     } finally {
       loading.value = false
     }
+  }
+
+  const deactivate = async () => {
+    await fetch('/api/scripts/deactivate', { method: 'POST' })
+    await fetchScripts()
   }
 
   const toggleFallbackCheckin = async () => {

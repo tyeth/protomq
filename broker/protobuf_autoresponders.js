@@ -79,9 +79,18 @@ export const setActiveScript = (name, { disabledSteps = [], autoReset = true } =
   const script = _scriptState.scripts.get(name)
   if (!script) return false
   if (_scriptState.activeExecutor) _scriptState.activeExecutor.reset()
-  _scriptState.activeExecutor = new ScriptExecutor(script, _scriptState.broker, { disabledSteps, autoReset })
+  // Merge script-level enabled:false defaults with UI-provided disabledSteps
+  const scriptDisabled = script.steps.filter(s => s.enabled === false).map(s => s.name)
+  const mergedDisabled = [...new Set([...scriptDisabled, ...disabledSteps])]
+  _scriptState.activeExecutor = new ScriptExecutor(script, _scriptState.broker, { disabledSteps: mergedDisabled, autoReset })
   _scriptState.activeScriptName = name
   return true
+}
+
+export const deactivateScript = () => {
+  if (_scriptState.activeExecutor) _scriptState.activeExecutor.reset()
+  _scriptState.activeExecutor = null
+  _scriptState.activeScriptName = null
 }
 
 export const
