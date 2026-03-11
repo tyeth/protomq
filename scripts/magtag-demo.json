@@ -71,6 +71,7 @@
       }
     },
     {
+      "enabled": false,
       "name": "enable-neopixel-power",
       "description": "Enable NeoPixel + Light Sensor power (D21 LOW = enabled)",
       "after": "checkin-response",
@@ -91,6 +92,7 @@
       }
     },
     {
+      "enabled": false,
       "name": "add-neopixels",
       "description": "Configure 4x NeoPixel strand on D1 (GRB order)",
       "after": "enable-neopixel-power",
@@ -109,6 +111,7 @@
       }
     },
     {
+      "enabled": false,
       "name": "neopixel-red",
       "description": "Set all NeoPixels to red",
       "after": "add-neopixels",
@@ -124,6 +127,7 @@
       }
     },
     {
+      "enabled": false,
       "name": "neopixel-rainbow",
       "description": "Set NeoPixels to rainbow colors (red, green, blue, white)",
       "after": "neopixel-red",
@@ -139,6 +143,7 @@
       }
     },
     {
+      "enabled": false,
       "name": "add-button-a",
       "description": "Add Button A (D15) as digital input with pull-up",
       "after": "checkin-response",
@@ -156,6 +161,7 @@
       }
     },
     {
+      "enabled": false,
       "name": "add-button-b",
       "description": "Add Button B (D14) as digital input with pull-up",
       "after": "checkin-response",
@@ -173,6 +179,7 @@
       }
     },
     {
+      "enabled": false,
       "name": "add-button-c",
       "description": "Add Button C (D12) as digital input with pull-up",
       "after": "checkin-response",
@@ -190,6 +197,7 @@
       }
     },
     {
+      "enabled": false,
       "name": "add-button-d",
       "description": "Add Button D (D11) as digital input with pull-up",
       "after": "checkin-response",
@@ -207,6 +215,7 @@
       }
     },
     {
+      "enabled": false,
       "name": "add-dimmable-led",
       "description": "Add dimmable LED on D13 (PWM, 5000Hz, 12-bit resolution)",
       "after": "checkin-response",
@@ -224,6 +233,7 @@
       }
     },
     {
+      "enabled": false,
       "name": "led-on",
       "description": "Turn LED on at 50% brightness (duty cycle 2048/4096)",
       "after": "add-dimmable-led",
@@ -239,6 +249,7 @@
       }
     },
     {
+      "enabled": false,
       "name": "add-light-sensor",
       "description": "Add light sensor on A3 (analog input, 30s period)",
       "after": "enable-neopixel-power",
@@ -255,6 +266,7 @@
       }
     },
     {
+      "enabled": false,
       "name": "enable-speaker",
       "description": "Enable speaker power (D16 HIGH)",
       "after": "checkin-response",
@@ -275,6 +287,7 @@
       }
     },
     {
+      "enabled": false,
       "name": "add-buzzer",
       "description": "Add piezo buzzer on D17 (PWM, variable frequency, 10-bit resolution)",
       "after": "enable-speaker",
@@ -291,6 +304,7 @@
       }
     },
     {
+      "enabled": false,
       "name": "buzzer-tone",
       "description": "Play a 440Hz tone on the buzzer",
       "after": "add-buzzer",
@@ -306,6 +320,7 @@
       }
     },
     {
+      "enabled": false,
       "name": "buzzer-off",
       "description": "Silence the buzzer",
       "after": "buzzer-tone",
@@ -321,6 +336,7 @@
       }
     },
     {
+      "enabled": false,
       "name": "write-status",
       "description": "Write final status message to the E-Ink display",
       "after": "neopixel-rainbow",
