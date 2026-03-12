@@ -25,13 +25,17 @@ export const connect = () => {
 
   let currentTopics = []
 
+  // Unwrap Vue reactive values to plain string array for MQTT client
+  const toPlainTopics = (topics) => Array.from(topics, t => String(t))
+
   const applyTopics = (topics) => {
+    const newTopics = toPlainTopics(topics)
     if (currentTopics.length) {
       client.unsubscribe(currentTopics, err => {
         if (err) console.error('Unsubscribe error:', err)
       })
     }
-    currentTopics = [...topics]
+    currentTopics = newTopics
     client.subscribe(currentTopics, err => {
       if (err) console.error('Subscribe error:', err)
     })

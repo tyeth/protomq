@@ -50,7 +50,7 @@ const
     // ack: (packet, client) => console.log(`ack (${client.id}):`, formatPacket(packet)),
     // ping: (packet, client) => console.log(`ping (${client.id}):`, formatPacket(packet)),
     subscribe: (subscriptions, client) => console.log(`subscriptions (${client.id})`, map(subscriptions, "topic")),
-    unsubscribe: (unsubscriptions, client) => console.log(`unsubscriptions (${client.id}):`, map(unsubscriptions, "topic")),
+    unsubscribe: (unsubscriptions, client) => console.log(`unsubscriptions (${client.id}):`, unsubscriptions),  // aedes passes string[], not {topic}[]
     // connackSent: (packet, client) => console.log(`connack (${client.id}):`, packet),
     closed: () => console.log("Broker closed."),
   },
