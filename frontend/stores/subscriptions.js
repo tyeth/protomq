@@ -5,7 +5,7 @@ import { get, set } from 'idb-keyval'
 
 // Topic patterns per subscription mode
 export const SUBSCRIPTION_MODES = {
-  both:   { label: 'Both V1+V2', topics: ['#'] },
+  both:   { label: 'Both V1+V2', topics: ['+/ws-b2d/+', '+/ws-d2b/+', '+/wprsnpr/#'] },
   v2:     { label: 'V2 Only',    topics: ['+/ws-b2d/+', '+/ws-d2b/+'] },
   v1:     { label: 'V1 Only',    topics: ['+/wprsnpr/#'] },
 }
@@ -24,9 +24,11 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     )),
     rejectedSubscriptions = computed(() => without(recentSubscriptions.value, ...filteredSubscriptions.value)),
     subscriptionsWithStatus = computed(() => map(filteredSubscriptions.value, sub => {
+      const ours = includes(activeTopics.value, sub)
+      const brokerLive = includes(liveSubscriptions.value, sub)
       return {
         topic: sub,
-        status: includes(liveSubscriptions.value, sub) ? 'live' : 'recent'
+        status: ours ? 'live' : brokerLive ? 'other' : 'recent'
       }
     }))
 

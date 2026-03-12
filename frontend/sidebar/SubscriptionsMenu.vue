@@ -70,8 +70,9 @@
     hideFiltered = ref(true),
     toggleFilterControls = () => hideFiltered.value = !hideFiltered.value,
     filterStatus = filter => includes(disabledFilters.value, filter) ? "❌" : "✅",
-    liveStatus = status => status === 'live' ? "⚡" : "🕓",
-    subscriptionTitle = sub => `(${sub.status}) ${sub.topic}`,
+    liveStatus = status => status === 'live' ? "⚡" : status === 'other' ? "👤" : "🕓",
+    statusLabel = { live: 'subscribed', other: 'other client subscribed', recent: 'recent' },
+    subscriptionTitle = sub => `(${statusLabel[sub.status]}) ${sub.topic}`,
     newFilter = ref(''),
     submitFilter = () => {
       const filterVal = newFilter.value
