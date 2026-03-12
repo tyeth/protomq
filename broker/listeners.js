@@ -1,4 +1,5 @@
 import { map } from 'lodash-es'
+import { BrokerToDevice, DeviceToBroker } from '../protobufs.js'
 
 // CONSTANTS
 const EVENT_NAMES = [
@@ -19,10 +20,28 @@ const EVENT_NAMES = [
 
 // HELPERS
 const
-  formatPacket = packet => (packet
-    ? { topic: packet.topic, payload_hex: Buffer.from(packet.payload).toString('hex'), payload_str: packet.payload?.toString() }
-    : 'packet unavailable'
-  ),
+  tryProtobufDecode = (topic, payload) => {
+    try {
+      if (topic.includes('/ws-b2d/')) {
+        const msg = BrokerToDevice.decode(payload)
+        return BrokerToDevice.toObject(msg, { enums: String, defaults: false })
+      }
+      if (topic.includes('/ws-d2b/')) {
+        const msg = DeviceToBroker.decode(payload)
+        return DeviceToBroker.toObject(msg, { enums: String, defaults: false })
+      }
+    } catch (e) { /* not a protobuf topic or decode failed */ }
+    return null
+  },
+
+  formatPacket = packet => {
+    if (!packet) return 'packet unavailable'
+    const decoded = tryProtobufDecode(packet.topic, packet.payload)
+    if (decoded) {
+      return `${packet.topic}\n  ${JSON.stringify(decoded)}`
+    }
+    return { topic: packet.topic, payload_str: packet.payload?.toString() }
+  },
   addListeners = (broker, listeners, options={}) => {
     const handledEvents = Object.keys(listeners)
 
@@ -46,7 +65,7 @@ const
     clientError: (client, error) => console.log(`error (${client.id}):`, error),
     connectionError: (client, error) => console.log(`connection error (${client.id}):`, error),
     // keepaliveTimeout: (client) => console.log(`keepalive timeout (${client.id})`),
-    publish: (packet, client) => client?.id && console.log(`publish (${client.id}):`, formatPacket(packet)),
+    publish: (packet, client) => console.log(`publish (${client?.id ?? 'broker'}):`, formatPacket(packet)),
     // ack: (packet, client) => console.log(`ack (${client.id}):`, formatPacket(packet)),
     // ping: (packet, client) => console.log(`ping (${client.id}):`, formatPacket(packet)),
     subscribe: (subscriptions, client) => console.log(`subscriptions (${client.id})`, map(subscriptions, "topic")),
