@@ -32,7 +32,14 @@ export const useMessageStore = defineStore('message', () => {
 
         if(!this.messageFields[currentPath]) {
           // look it up and set it
-          const lastPathMessageFields = this.messageFields[scrubBrackets(lastPath)]
+          // scrub brackets only on the last segment of the path to avoid
+          // truncating at an ancestor's array index (e.g. "foo[0].bar" → "foo.bar")
+          const scrubLastSegment = p => {
+            const lastDot = p.lastIndexOf('.')
+            if(lastDot === -1) return scrubBrackets(p)
+            return p.slice(0, lastDot + 1) + scrubBrackets(p.slice(lastDot + 1))
+          }
+          const lastPathMessageFields = this.messageFields[lastPath] || this.messageFields[scrubLastSegment(lastPath)]
           const foundField = lastPathMessageFields.find(({ fieldName, fieldType, options=[] }) => {
             if(fieldType === 'oneof') {
               return some(options, { fieldName: scrubBrackets(pathSegment) })
