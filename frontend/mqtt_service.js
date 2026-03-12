@@ -1,4 +1,6 @@
 import { flatten, map, sortBy, uniq } from "lodash-es"
+import { watch } from "vue"
+import { storeToRefs } from "pinia"
 import { useMQTTStore } from './stores/mqtt'
 import { useSubscriptionStore } from './stores/subscriptions'
 
@@ -16,15 +18,35 @@ export const connect = () => {
   const
     mqttStore = useMQTTStore(),
     subscriptionStore = useSubscriptionStore(),
+    { activeTopics } = storeToRefs(subscriptionStore),
     client = mqtt.connect(mqttUrl, options)
 
   mqttStore.client = client
 
-  // Subscribe to all messages
-  client.on('connect', () => {
-    client.subscribe(["#", "$SYS/#"], err => {
-      if(err) { console.error(err) }
+  let currentTopics = []
+
+  const applyTopics = (topics) => {
+    if (currentTopics.length) {
+      client.unsubscribe(currentTopics, err => {
+        if (err) console.error('Unsubscribe error:', err)
+      })
+    }
+    currentTopics = [...topics]
+    client.subscribe(currentTopics, err => {
+      if (err) console.error('Subscribe error:', err)
     })
+  }
+
+  // Subscribe on connect using the current mode's topics
+  client.on('connect', () => {
+    applyTopics(activeTopics.value)
+  })
+
+  // Re-subscribe when subscription mode changes
+  watch(activeTopics, (newTopics) => {
+    if (client.connected) {
+      applyTopics(newTopics)
+    }
   })
 
   // Handle incoming messages
