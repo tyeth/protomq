@@ -1,6 +1,6 @@
 {
-  "name": "Huzzah ESP8266 128x32 OLED Demo",
-  "description": "Tests SSD1306 128x32 I2C OLED FeatherWing on Adafruit Feather Huzzah ESP8266. Responds to checkin, configures the OLED at 0x3C, then writes test messages.",
+  "name": "Guition ESP32-P4 1024x600 DSI Demo",
+  "description": "Tests JC1060P470 1024x600 MIPI DSI display on Guition ESP32-P4 with C6 coprocessor. Responds to checkin, configures the DSI display, then writes test messages.",
   "protoVersion": "v2",
   "steps": [
     {
@@ -11,8 +11,8 @@
         "checkin": {
           "response": {
             "response": "R_OK",
-            "totalGpioPins": 9,
-            "totalAnalogPins": 1,
+            "totalGpioPins": 55,
+            "totalAnalogPins": 8,
             "referenceVoltage": 3.3,
             "componentAdds": {},
             "sleepEnabled": false
@@ -22,31 +22,37 @@
     },
     {
       "name": "add-display",
-      "description": "Configure the 128x32 SSD1306 OLED FeatherWing via I2C at 0x3C",
+      "description": "Configure the 1024x600 MIPI DSI display (JC1060P470, reset GPIO27, backlight GPIO23). DSI lanes are dedicated pads on P4, not GPIOs.",
       "after": "checkin-response",
       "waitFor": "checkin.complete",
-      "delay": 500,
+      "delay": 1000,
       "topic": "display",
       "send": {
         "display": {
           "add": {
-            "type": "DISPLAY_CLASS_OLED",
-            "driver": "SSD1306",
-            "panel": "oled128x32default",
-            "name": "oled128x32default",
-            "i2c": {
-              "deviceAddress": 60,
-              "busSda": "D4",
-              "busScl": "D5"
+            "type": "DISPLAY_CLASS_TFT",
+            "driver": "JC1060P470",
+            "panel": "guition-p4-jc1060p470",
+            "name": "dsi0",
+            "dsi": {
+              "bus": 0,
+              "pinRst": "D27"
             },
             "configDisplay": {
-              "width": 128,
-              "height": 32,
-              "textSize": 1
+              "width": 1024,
+              "height": 600,
+              "rotation": 0,
+              "textSize": 3
             },
             "write": {
-              "name": "oled128x32default",
+              "name": "dsi0",
               "message": "Hello from ProtoMQ!"
+            },
+            "backlight": {
+              "pin": "D23",
+              "mode": "BL_MODE_PWM",
+              "activeLow": false,
+              "brightness": 80
             }
           }
         }
@@ -54,7 +60,7 @@
     },
     {
       "name": "write-hello",
-      "description": "Write a test message to the OLED",
+      "description": "Write a test message to the DSI display",
       "after": "add-display",
       "delay": 3000,
       "waitFor": "display.addedOrReplaced",
@@ -62,8 +68,8 @@
       "send": {
         "display": {
           "write": {
-            "name": "oled128x32default",
-            "message": "Hello from ProtoMQ!\nHuzzah ESP8266\n128x32 I2C OLED"
+            "name": "dsi0",
+            "message": "Hello from ProtoMQ!\nGuition ESP32-P4\n1024x600 MIPI DSI\nJC1060P470 Panel"
           }
         }
       }
@@ -77,8 +83,8 @@
       "send": {
         "display": {
           "write": {
-            "name": "oled128x32default",
-            "message": "ESP8266 Test OK\nOLED 0x3C ready"
+            "name": "dsi0",
+            "message": "ESP32-P4 Test OK\nDSI Display ready\nC6 coprocessor active"
           }
         }
       }

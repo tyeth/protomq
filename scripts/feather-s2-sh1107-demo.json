@@ -30,7 +30,7 @@
       "send": {
         "display": {
           "add": {
-            "type": "DISPLAY_TYPE_OLED",
+            "type": "DISPLAY_CLASS_OLED",
             "driver": "SH1107",
             "panel": "oled128x64default",
             "name": "oled128x64default",
@@ -39,10 +39,10 @@
               "busSda": "D3",
               "busScl": "D4"
             },
-            "configOled": {
+            "configDisplay": {
               "width": 128,
               "height": 64,
-              "fontSize": "OTS_DEFAULT"
+              "textSize": 1
             },
             "write": {
               "name": "oled128x64default",

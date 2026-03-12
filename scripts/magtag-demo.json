@@ -30,22 +30,28 @@
       "send": {
         "display": {
           "add": {
-            "type": "DISPLAY_TYPE_EPD",
+            "type": "DISPLAY_CLASS_EPD",
             "driver": "SSD1680",
             "panel": "adafruit-magtag",
             "name": "epd0",
             "spiEpd": {
-              "bus": 0,
-              "pinDc": "D7",
-              "pinRst": "D6",
-              "pinCs": "D8",
-              "pinBusy": "D5"
+              "pinBusy": "D5",
+              "spiPins": {
+                "bus": 0,
+                "pinMosi": "D35",
+                "pinSck": "D36",
+                "pinCs": "D8",
+                "pinDc": "D7",
+                "pinRst": "D6"
+              }
             },
             "configEpd": {
               "mode": "EPD_MODE_MONO",
-              "width": 296,
-              "height": 128,
-              "textSize": 3
+              "properties": {
+                "width": 296,
+                "height": 128,
+                "textSize": 3
+              }
             },
             "write": {
               "name": "epd0",

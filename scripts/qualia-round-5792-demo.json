@@ -29,7 +29,7 @@
       "send": {
         "display": {
           "add": {
-            "type": "DISPLAY_TYPE_TFT",
+            "type": "DISPLAY_CLASS_TFT",
             "driver": "ST7701",
             "panel": "adafruit-5792",
             "name": "qualia-round",
@@ -38,11 +38,15 @@
               "pinG0": "D21", "pinG1": "D47", "pinG2": "D48",
               "pinB0": "D10", "pinB1": "D11", "pinB2": "D12"
             },
-            "configTtlRgb666": {
+            "configDisplay": {
               "width": 480,
               "height": 480,
               "rotation": 0,
               "textSize": 2
+            },
+            "write": {
+              "name": "qualia-round",
+              "message": "Hello from ProtoMQ!"
             }
           }
         }

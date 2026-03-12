@@ -30,7 +30,7 @@
       "send": {
         "display": {
           "add": {
-            "type": "DISPLAY_TYPE_CHAR_LCD",
+            "type": "DISPLAY_CLASS_CHAR_LCD",
             "driver": "charlcd",
             "panel": "charlcd16x2default",
             "name": "charlcd16x2default",

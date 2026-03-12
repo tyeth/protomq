@@ -30,7 +30,7 @@
       "send": {
         "display": {
           "add": {
-            "type": "DISPLAY_TYPE_OLED",
+            "type": "DISPLAY_CLASS_OLED",
             "driver": "SSD1306",
             "panel": "oled128x32default",
             "name": "oled128x32default",
@@ -39,10 +39,10 @@
               "busSda": "D47",
               "busScl": "D48"
             },
-            "configOled": {
+            "configDisplay": {
               "width": 128,
               "height": 32,
-              "fontSize": "OTS_DEFAULT"
+              "textSize": 1
             },
             "write": {
               "name": "oled128x32default",

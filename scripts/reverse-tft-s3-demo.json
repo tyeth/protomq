@@ -30,19 +30,21 @@
       "send": {
         "display": {
           "add": {
-            "type": 2,
+            "type": "DISPLAY_CLASS_TFT",
             "driver": "ST7789",
             "panel": "adafruit-reverse-tft",
             "name": "tft0",
             "spiTft": {
-              "bus": 0,
-              "pinCs": "D42",
-              "pinDc": "D40",
-              "pinMosi": "D35",
-              "pinSck": "D36",
-              "pinRst": "D41"
+              "spiPins": {
+                "bus": 0,
+                "pinMosi": "D35",
+                "pinSck": "D36",
+                "pinCs": "D42",
+                "pinDc": "D40",
+                "pinRst": "D41"
+              }
             },
-            "configTft": {
+            "configDisplay": {
               "width": 240,
               "height": 135,
               "rotation": 1,
