@@ -40,6 +40,16 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     saveData()
   }
 
+  function clearRecentSubscriptions() {
+    this.recentSubscriptions = [...this.liveSubscriptions]
+    saveData()
+  }
+
+  function onBrokerConnect() {
+    // New server session — clear stale recents, they'll rebuild from state/clients
+    this.recentSubscriptions = []
+  }
+
   // Computed list of topics the MQTT client should subscribe to
   const activeTopics = computed(() => [
     ...SUBSCRIPTION_MODES[subscriptionMode.value].topics,
@@ -120,6 +130,8 @@ export const useSubscriptionStore = defineStore('subscriptions', () => {
     loadSavedData,
     subscriptionMode,
     activeTopics,
-    setSubscriptionMode
+    setSubscriptionMode,
+    clearRecentSubscriptions,
+    onBrokerConnect
   }
 })

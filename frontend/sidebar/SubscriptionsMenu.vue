@@ -4,11 +4,14 @@
       <h3 class="section-toggle" @click="sectionOpen = !sectionOpen">
         {{ sectionOpen ? '&#9660;' : '&#9654;' }} Subscriptions
       </h3>
-      <select class="mode-select" :value="subscriptionMode" @change="setSubscriptionMode($event.target.value)" @click.stop>
-        <option v-for="(mode, key) in SUBSCRIPTION_MODES" :key="key" :value="key">
-          {{ mode.label }}
-        </option>
-      </select>
+      <span class="header-controls" @click.stop>
+        <select class="mode-select" :value="subscriptionMode" @change="setSubscriptionMode($event.target.value)">
+          <option v-for="(mode, key) in SUBSCRIPTION_MODES" :key="key" :value="key">
+            {{ mode.label }}
+          </option>
+        </select>
+        <button class="clear-btn" @click="clearRecentSubscriptions" title="Clear stale subscriptions">Clear Recent Topics</button>
+      </span>
     </div>
 
     <div v-if="sectionOpen">
@@ -61,7 +64,7 @@
   const
     subscriptionStore = useSubscriptionStore(),
     { subscriptionsWithStatus, rejectedSubscriptions, filters, disabledFilters, subscriptionMode } = storeToRefs(subscriptionStore),
-    { addFilter, toggleFilter, setSubscriptionMode } = subscriptionStore,
+    { addFilter, toggleFilter, setSubscriptionMode, clearRecentSubscriptions } = subscriptionStore,
     sectionOpen = ref(true),
     hiddenCount = computed(() => rejectedSubscriptions.value.length),
     hideFiltered = ref(true),
@@ -86,7 +89,7 @@
 
   .section-header {
     display: flex;
-    align-items: baseline;
+    align-items: flex-end;
     justify-content: space-between;
     gap: 0.4em;
   }
@@ -101,19 +104,34 @@
     opacity: 0.8;
   }
 
-  .mode-select {
+  .header-controls {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.3em;
+    margin-bottom: 4px;
+  }
+
+  .clear-btn, .mode-select {
     font-size: 0.7em;
-    padding: 1px 2px;
+    padding: 1px 4px;
     background: var(--bg);
     color: var(--text);
     border: 1px solid var(--border);
     border-radius: 3px;
+  }
+
+  .clear-btn {
+    cursor: pointer;
+    color: var(--text-muted);
+  }
+
+  .clear-btn:hover {
+    color: var(--text);
+  }
+
+  .mode-select {
     color-scheme: light dark;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    position: relative;
-    top: -4px;
   }
 
   .filter-panel {

@@ -39,6 +39,8 @@ export const connect = () => {
 
   // Subscribe on connect using the current mode's topics
   client.on('connect', () => {
+    // New broker session — clear stale recents from previous session
+    subscriptionStore.onBrokerConnect()
     applyTopics(activeTopics.value)
   })
 
