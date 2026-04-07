@@ -1,0 +1,101 @@
+name: HIL Display Tests
+
+on:
+  push:
+    branches: [main, video-qr-pytest-capture]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      runner_config:
+        description: "Path to runner config JSON (default: runner.json)"
+        required: false
+        type: string
+        default: "runner.json"
+
+jobs:
+  hil-tests:
+    runs-on: [self-hosted, hil-bench]
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: requirements-test.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-test.txt
+
+      - name: Run HIL tests
+        run: |
+          pytest tests/ \
+            --runner-config "${{ inputs.runner_config || 'runner.json' }}" \
+            --artifacts-dir artifacts \
+            -v --tb=short \
+            --junitxml=artifacts/junit.xml \
+            -o junit_family=xunit2
+        env:
+          VIDEO_DEVICE: "0"
+
+      - name: Generate CI summary
+        if: always()
+        run: |
+          python -c "
+          import json, os, sys
+
+          summary_path = 'artifacts/hil_failures.jsonl'
+          if not os.path.exists(summary_path):
+              print('No structured HIL failures recorded.')
+              sys.exit(0)
+
+          with open(summary_path) as f:
+              failures = [json.loads(line) for line in f if line.strip()]
+
+          if not failures:
+              print('No structured HIL failures recorded.')
+              sys.exit(0)
+
+          categories = {}
+          for entry in failures:
+              cat = entry['category']
+              categories.setdefault(cat, []).append(entry)
+
+          lines = ['## HIL Test Failure Summary\n']
+          for cat, entries in sorted(categories.items()):
+              lines.append(f'### {cat.title()} ({len(entries)})')
+              for e in entries:
+                  lines.append(f'- **{e[\"code\"]}**: {e[\"message\"]}')
+                  lines.append(f'  - Test: \`{e[\"nodeid\"]}\`')
+              lines.append('')
+
+          summary = '\n'.join(lines)
+          print(summary)
+
+          gh_summary = os.environ.get('GITHUB_STEP_SUMMARY', '')
+          if gh_summary:
+              with open(gh_summary, 'a') as f:
+                  f.write(summary)
+          "
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hil-artifacts-${{ github.run_number }}
+          path: artifacts/
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Upload JUnit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-results-${{ github.run_number }}
+          path: artifacts/junit.xml
+          retention-days: 30

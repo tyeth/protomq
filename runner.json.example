@@ -1,0 +1,19 @@
+{
+  "runner_id": "bench-alpha",
+
+  "boards": [
+    {"url": "https://adafru.it/4868", "status": "online"},
+    {"url": "https://adafru.it/5300", "status": "online"},
+    {"url": "https://adafru.it/4313", "status": "online"},
+    {"url": "https://adafru.it/4650", "status": "online"},
+    {"url": "https://adafru.it/3129", "status": "offline"},
+    {"url": "https://adafru.it/1028", "status": "retired"}
+  ],
+
+  "features": {
+    "camera": true,
+    "camera_device": 0,
+    "ppk2": false,
+    "ppk2_serial": null
+  }
+}
