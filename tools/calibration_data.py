@@ -14,10 +14,7 @@ REF_HEIGHT = 2092
 # QR code centre positions {adafru.it/<id>: (cx, cy)}
 QR_CENTRES = {
     "https://adafru.it/398":  ( 815,  495),
-    "https://adafru.it/1028": (1971, 1795),  # unit A (decoded by pyzbar)
-    # NOTE: /1028 appears TWICE on the bench (two identical 2.9" R/B/W eInk boards)
-    # Unit B QR was not decodable — position TBD from closer photo
-    # "https://adafru.it/1028_b": (TBD, TBD),
+    "https://adafru.it/1028": (1971, 1795),
     "https://adafru.it/2900": ( 934, 1605),
     "https://adafru.it/3129": (1355, 1152),
     "https://adafru.it/4116": ( 361, 1137),
