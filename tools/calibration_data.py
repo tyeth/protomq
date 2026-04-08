@@ -136,4 +136,5 @@ YELLOW_BOX_ROIS = {
     "https://adafru.it/4868": [150, 1260, 754, 1961],  # from annotated reference
     "https://adafru.it/5300": [1238, 40, 1681, 511],  # from annotated reference
     "https://adafru.it/5483": [1274, 516, 1679, 882],  # from annotated reference
+    "https://adafru.it/5691": [724, 1518, 1300, 2068],  # inferred from avg QR-to-box ratio (yellow box not detected)
 }
