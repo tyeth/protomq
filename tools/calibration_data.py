@@ -121,3 +121,19 @@ def transform_roi(roi_ref, detected_qrs: dict) -> tuple:
     nw = int(w * scale)
     nh = int(h * scale)
     return (nx, ny, nw, nh)
+
+
+YELLOW_BOX_ROIS = {
+    "https://adafru.it/1028": [1817, 1224, 2463, 1913],  # from annotated reference
+    "https://adafru.it/2900": [825, 1233, 1260, 1697],  # from annotated reference
+    "https://adafru.it/3129": [1272, 883, 1726, 1254],  # from annotated reference
+    "https://adafru.it/398": [203, 38, 1199, 596],  # from annotated reference
+    "https://adafru.it/4116": [203, 625, 841, 1228],  # from annotated reference
+    "https://adafru.it/4313": [1697, 98, 2425, 653],  # from annotated reference
+    "https://adafru.it/4440": [1269, 1267, 1800, 2010],  # from annotated reference
+    "https://adafru.it/4650": [847, 630, 1270, 1175],  # from annotated reference
+    "https://adafru.it/4777": [1754, 665, 2360, 1195],  # from annotated reference
+    "https://adafru.it/4868": [150, 1260, 754, 1961],  # from annotated reference
+    "https://adafru.it/5300": [1238, 40, 1681, 511],  # from annotated reference
+    "https://adafru.it/5483": [1274, 516, 1679, 882],  # from annotated reference
+}
