@@ -1,0 +1,5 @@
+[project]
+name = "protomq-display-tests"
+version = "0.1.0"
+description = "Hardware display testing pipeline with video capture and QR-code ROI detection"
+requires-python = ">=3.10"

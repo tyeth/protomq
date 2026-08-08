@@ -1,0 +1,119 @@
+{
+  "https://adafru.it/398": {
+    "board_bbox": [
+      330,
+      190,
+      472,
+      279
+    ],
+    "name": "RGB backlight"
+  },
+  "https://adafru.it/5300": {
+    "board_bbox": [
+      600,
+      170,
+      728,
+      250
+    ],
+    "name": "ESP32 S2 TFT"
+  },
+  "https://adafru.it/1028": {
+    "board_bbox": [
+      920,
+      850,
+      1000,
+      940
+    ],
+    "name": "Red/Black/White"
+  },
+  "https://adafru.it/4868": {
+    "board_bbox": [
+      100,
+      850,
+      220,
+      940
+    ],
+    "name": "1.54\" Tri Color"
+  },
+  "https://adafru.it/2900": {
+    "board_bbox": [
+      390,
+      750,
+      540,
+      830
+    ],
+    "name": "FeatherWing OLED"
+  },
+  "https://adafru.it/4777": {
+    "board_bbox": [
+      850,
+      490,
+      990,
+      580
+    ],
+    "name": "2.9\" Grayscale"
+  },
+  "https://adafru.it/4116": {
+    "board_bbox": [
+      100,
+      490,
+      250,
+      580
+    ],
+    "name": "PyPortal"
+  },
+  "https://adafru.it/4650": {
+    "board_bbox": [
+      390,
+      490,
+      540,
+      580
+    ],
+    "name": "FeatherWing OLED"
+  },
+  "https://adafru.it/5691": {
+    "board_bbox": [
+      390,
+      900,
+      540,
+      990
+    ],
+    "name": "ESP32 S3 Reverse"
+  },
+  "https://adafru.it/4440": {
+    "board_bbox": [
+      600,
+      890,
+      730,
+      980
+    ],
+    "name": "Monochrome 0.91\""
+  },
+  "https://adafru.it/3129": {
+    "board_bbox": [
+      600,
+      530,
+      730,
+      620
+    ],
+    "name": "0.54\" Quad"
+  },
+  "https://adafru.it/5483": {
+    "board_bbox": [
+      600,
+      330,
+      730,
+      420
+    ],
+    "name": "ESP32 S3 TFT"
+  },
+  "https://adafru.it/4313": {
+    "board_bbox": [
+      850,
+      210,
+      990,
+      300
+    ],
+    "name": "1.3\" 240x240"
+  }
+}
