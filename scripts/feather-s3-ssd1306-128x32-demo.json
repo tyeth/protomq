@@ -1,0 +1,104 @@
+{
+  "name": "Feather ESP32-S3 FeatherWing OLED 128x32 Demo",
+  "description": "Tests the Adafruit FeatherWing OLED 128x32 (SSD1306, Adafruit #2900) stacked on an Adafruit Feather ESP32-S3. Responds to checkin, configures the SSD1306 at I2C address 0x3C on the Feather S3 primary Wire bus (SDA=GPIO3, SCL=GPIO4), writes test messages, then verifies repeat writes.",
+  "protoVersion": "v2",
+  "steps": [
+    {
+      "name": "checkin-response",
+      "description": "Respond to device checkin with OK and Feather ESP32-S3 board capabilities",
+      "trigger": "checkin.request",
+      "response": {
+        "checkin": {
+          "response": {
+            "response": "R_OK",
+            "totalGpioPins": 21,
+            "totalAnalogPins": 5,
+            "referenceVoltage": 3.3,
+            "componentAdds": {},
+            "sleepEnabled": false
+          }
+        }
+      }
+    },
+    {
+      "name": "add-display",
+      "description": "Configure the 128x32 SSD1306 OLED FeatherWing via I2C at address 0x3C. SDA=GPIO3, SCL=GPIO4 (Feather ESP32-S3 primary Wire bus).",
+      "after": "checkin-response",
+      "waitFor": "checkin.complete",
+      "delay": 500,
+      "topic": "display",
+      "send": {
+        "display": {
+          "add": {
+            "type": "DISPLAY_CLASS_OLED",
+            "driver": "SSD1306",
+            "panel": "oled128x32default",
+            "name": "oled128x32default",
+            "i2c": {
+              "addressSpace": {
+                "pinSda": 3,
+                "pinScl": 4
+              },
+              "address": 60
+            },
+            "configDisplay": {
+              "width": 128,
+              "height": 32,
+              "textSize": 1
+            },
+            "write": {
+              "name": "oled128x32default",
+              "message": "Hello from ProtoMQ!"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "write-hello",
+      "description": "Write a multi-line test message after the display add succeeds",
+      "after": "add-display",
+      "waitFor": "display.addedOrReplaced",
+      "delay": 3000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "oled128x32default",
+            "message": "Hello from ProtoMQ!\nFeather ESP32-S3\n128x32 I2C OLED"
+          }
+        }
+      }
+    },
+    {
+      "name": "write-update",
+      "description": "Write a second message to verify repeat writes work (no driver hang)",
+      "after": "write-hello",
+      "delay": 5000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "oled128x32default",
+            "message": "SSD1306 @ 0x3C\nFeatherWing #2900\nTest complete"
+          }
+        }
+      }
+    },
+    {
+      "name": "write-status",
+      "description": "Final pass/fail status message for camera verification",
+      "after": "write-update",
+      "delay": 3000,
+      "topic": "display",
+      "send": {
+        "display": {
+          "write": {
+            "name": "oled128x32default",
+            "message": "PASS: OLED OK\nWipperSnapper\ndisplay test"
+          }
+        }
+      }
+    }
+  ]
+}
